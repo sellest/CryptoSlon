@@ -1,0 +1,19 @@
+2025-08-05 21:51:00,200 [INFO] GigaChatClient: invoke → GigaChatClient | 2 messages
+2025-08-05 21:51:00,966 [INFO] httpx: HTTP Request: POST https://ngw.devices.sberbank.ru:9443/api/v2/oauth "HTTP/1.1 200 OK"
+2025-08-05 21:51:02,557 [INFO] httpx: HTTP Request: POST https://gigachat.devices.sberbank.ru/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-05 21:51:02,558 [INFO] GigaChatClient: response ← GigaChatClient | 138 chars
+2025-08-05 21:51:02,582 [INFO] GeminiClient: invoke → GeminiClient | 2 messages
+2025-08-05 21:51:04,374 [INFO] GeminiClient: response ← GeminiClient | 38 chars
+2025-08-05 21:51:07,950 [INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: mps
+2025-08-05 21:51:07,950 [INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2025-08-05 21:51:12,868 [INFO] GroqClient: invoke → GroqClient | 2 messages
+2025-08-05 21:51:14,138 [INFO] httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-05 21:51:14,150 [INFO] GroqClient: response ← GroqClient | 263 chars
+2025-08-05 21:54:00,457 [INFO] GigaChatClient: invoke → GigaChatClient | 2 messages
+2025-08-05 21:54:02,816 [INFO] GigaChatClient: response ← GigaChatClient | 131 chars
+2025-08-05 21:54:02,832 [INFO] GeminiClient: invoke → GeminiClient | 2 messages
+2025-08-05 21:54:04,548 [INFO] GeminiClient: response ← GeminiClient | 38 chars
+2025-08-05 21:54:07,781 [INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: mps
+2025-08-05 21:54:07,781 [INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2025-08-05 21:54:13,040 [INFO] GroqClient: invoke → GroqClient | 2 messages
+2025-08-05 21:54:14,138 [INFO] GroqClient: response ← GroqClient | 218 chars

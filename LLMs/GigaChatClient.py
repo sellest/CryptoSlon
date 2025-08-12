@@ -1,28 +1,47 @@
-from langchain_gigachat.chat_models import GigaChat
-from langchain_gigachat.embeddings import GigaChatEmbeddings
-from .BaseLLMClient import BaseLLMClient
-from dotenv import load_dotenv
+# giga_client.py
 import os
+from typing import Any, List, Optional, Dict
+import logging
+from dotenv import load_dotenv
+from LLMs.BaseLLMClient import BaseLLMClient
+from langchain_gigachat import GigaChat
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
+RoleMsg = Dict[str, str]  # {"role": "system"|"user"|"assistant", "content": "..."}
+
+ROLE_MAP = {
+    "system": SystemMessage,
+    "user": HumanMessage,
+    "assistant": AIMessage,
+}
 
 class GigaChatClient(BaseLLMClient):
-    def __init__(self, model_name: str = "GigaChat-Pro"):
-        super().__init__()
+    def __init__(
+        self,
+        scope: str = "GIGACHAT_API_PERS",
+        model: str = "GigaChat",
+        temperature: float = 0.2,
+        verify_ssl_certs: bool = False,
+        logger: Optional[logging.Logger] = None,
+    ):
+        super().__init__(logger)
         load_dotenv()
-        credentials = os.getenv("GIGACHAT_CREDENTIALS")
-
-        self.chat_client = GigaChat(
+        credentials=os.getenv("GIGACHAT_CREDENTIALS")
+        self.chat = GigaChat(
             credentials=credentials,
-            verify_ssl_certs=False,
-            model=model_name,
-        )
-        self.embed_client = GigaChatEmbeddings(
-            credentials=credentials,
-            verify_ssl_certs=False,
+            scope=scope,
+            model=model,
+            temperature=temperature,
+            verify_ssl_certs=verify_ssl_certs,
         )
 
-    def _invoke(self, prompt: list) -> str:
-        return self.chat_client.invoke(prompt).content
+    def _invoke(self, messages: List[RoleMsg]) -> str:
+        lc_msgs = []
+        for m in messages:
+            role = (m.get("role") or "user").lower()
+            content = m.get("content") or ""
+            constructor = ROLE_MAP.get(role, HumanMessage)
+            lc_msgs.append(constructor(content=content))
 
-    def embed(self, text: str) -> list[float]:
-        return self.embed_client.embed_query(text)
+        resp = self.chat.invoke(lc_msgs)
+        return getattr(resp, "content", str(resp))

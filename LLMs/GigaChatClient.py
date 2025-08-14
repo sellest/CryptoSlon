@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from LLMs.BaseLLMClient import BaseLLMClient
 from langchain_gigachat import GigaChat
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from sentence_transformers import SentenceTransformer
 
 RoleMsg = Dict[str, str]  # {"role": "system"|"user"|"assistant", "content": "..."}
 
@@ -34,6 +35,9 @@ class GigaChatClient(BaseLLMClient):
             temperature=temperature,
             verify_ssl_certs=verify_ssl_certs,
         )
+        
+        # Для эмбеддингов используем multilingual модель от sentence-transformers
+        self.embedding_model = None  # Ленивая загрузка
 
     def _invoke(self, messages: List[RoleMsg]) -> str:
         lc_msgs = []
@@ -45,3 +49,28 @@ class GigaChatClient(BaseLLMClient):
 
         resp = self.chat.invoke(lc_msgs)
         return getattr(resp, "content", str(resp))
+
+    def _load_embedding_model(self):
+        """Ленивая загрузка модели эмбеддингов"""
+        if self.embedding_model is None:
+            # Используем multilingual модель для поддержки русского языка
+            model_name = "intfloat/multilingual-e5-large"
+            self.logger.info(f"Loading embedding model: {model_name}")
+            self.embedding_model = SentenceTransformer(model_name)
+        return self.embedding_model
+
+    def _embed(self, texts: List[str]) -> List[List[float]]:
+        """Получение эмбеддингов с помощью sentence-transformers"""
+        if not texts:
+            return []
+        try:
+            model = self._load_embedding_model()
+            # Для multilingual-e5 моделей рекомендуется добавлять префикс
+            prefixed_texts = [f"query: {text}" for text in texts]
+            embeddings = model.encode(prefixed_texts, normalize_embeddings=True)
+            # Конвертируем в список списков float
+            return [embedding.tolist() for embedding in embeddings]
+        except Exception as e:
+            self.logger.error(f"Ошибка при получении эмбеддингов: {e}")
+            # Возвращаем пустые векторы в случае ошибки
+            return [[0.0] * 1024 for _ in texts]

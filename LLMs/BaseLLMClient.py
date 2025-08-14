@@ -13,6 +13,11 @@ class BaseLLMClient(ABC):
         """Низкоуровневый вызов модели."""
         raise NotImplementedError
 
+    @abstractmethod
+    def _embed(self, texts: List[str]) -> List[List[float]]:
+        """Низкоуровневый вызов для получения эмбеддингов."""
+        raise NotImplementedError
+
     def chat_raw(self, messages: List[Any]) -> str:
         self.logger.info("invoke → %s | %d messages", self.__class__.__name__, len(messages))
         response = self._invoke(messages)
@@ -26,3 +31,26 @@ class BaseLLMClient(ABC):
             msgs.append({"role": "system", "content": system_prompt})
         msgs.append({"role": "user", "content": user_input})
         return self.chat_raw(msgs)
+
+    def embed_texts(self, texts: List[str]) -> List[List[float]]:
+        """Получение эмбеддингов для списка текстов."""
+        if not texts:
+            return []
+        
+        self.logger.info("embed → %s | %d texts", self.__class__.__name__, len(texts))
+        embeddings = self._embed(texts)
+        
+        # Проверяем результат
+        if embeddings and len(embeddings) > 0:
+            dim = len(embeddings[0])
+            self.logger.info("embeddings ← %s | %d vectors, dim=%d", 
+                           self.__class__.__name__, len(embeddings), dim)
+        else:
+            self.logger.warning("embeddings ← %s | empty result", self.__class__.__name__)
+        
+        return embeddings
+
+    def embed_single(self, text: str) -> List[float]:
+        """Получение эмбеддинга для одного текста."""
+        embeddings = self.embed_texts([text])
+        return embeddings[0] if embeddings else []

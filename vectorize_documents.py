@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 # vectorize_documents.py - Simple document vectorization tool
 
-import logging
-import hashlib
 from pathlib import Path
 from typing import List
 from VectorDB.base_chroma_db import BaseChromaDB

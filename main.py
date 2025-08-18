@@ -53,8 +53,8 @@ if __name__ == "__main__":
     # print(gc.chat_one(messages))
     
     # Тест queryprep
-    # test_queryprep()
+    test_queryprep()
 
     # Тест эмбеддингов
-    test_embeddings()
+    # test_embeddings()
 

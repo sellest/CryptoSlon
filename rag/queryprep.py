@@ -20,14 +20,14 @@ class QueryPreprocessor:
         self.template = self._load_template()
         self.logger = logging.getLogger(__name__)
     
-    def _load_template(self) -> Dict[str, Any]:
+    def _load_template(self, template: str = "queryprep") -> Dict[str, Any]:
         """Загружает шаблон промпта из JSON файла"""
         template_path = os.path.join(
             os.path.dirname(__file__), 
             "..", 
             "prompts", 
             "templates", 
-            "queryprep.json"
+            f"{template}.json"
         )
         try:
             with open(template_path, 'r', encoding='utf-8') as f:

@@ -15,12 +15,13 @@ ROLE_MAP = {
     "user": HumanMessage,
     "assistant": AIMessage,
 }
+# Доступные модели: GigaChat-2, GigaChat-2-Pro, GigaChat-2-Max
 
 class GigaChatClient(BaseLLMClient):
     def __init__(
         self,
         scope: str = "GIGACHAT_API_PERS",
-        model: str = "GigaChat",
+        model: str = "GigaChat-2",
         temperature: float = 0.2,
         verify_ssl_certs: bool = False,
         logger: Optional[logging.Logger] = None,

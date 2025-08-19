@@ -2,12 +2,18 @@
 # agents/base_agent.py - Base class for AI agents
 
 import logging
+import os
+import sys
 from typing import Dict, Any, Optional
 from LLMs.factory import get_llm_client
 from agents.base_tool import BaseTool
 from agents.agent_memory import AgentMemory
 from agents.tool_manager import ToolManager
 from agents.rag_helper import RAGHelper
+
+# Add prompts directory to path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from prompts.PromptManager import PromptManager
 
 class BaseAgent:
     """
@@ -24,58 +30,48 @@ class BaseAgent:
         agent_name: str,
         llm_provider: str = "gigachat",
         vector_db_collection: Optional[str] = None,
-        max_iterations: int = 10
+        max_iterations: int = 10,
+        prompt_template: str = "base_agent_instructions"
     ):
         self.agent_name = agent_name
+        self.prompt_template = prompt_template
         self.logger = logging.getLogger(f"agent.{agent_name}")
         
         # Core components
         self.llm = get_llm_client(llm_provider)
         self.memory = AgentMemory()
         self.tool_manager = ToolManager()
+        self.prompt_manager = PromptManager()
         self.max_iterations = max_iterations
         
         # RAG helper (optional)
         self.rag_helper = RAGHelper(vector_db_collection) if vector_db_collection else None
         
         # Agent configuration
-        self.system_prompt = self._get_default_system_prompt()
+        self.system_prompt = self._get_system_prompt()
         
-        self.logger.info(f"Agent '{agent_name}' initialized")
+        self.logger.info(f"Agent '{agent_name}' initialized with template '{prompt_template}'")
     
-    def _get_default_system_prompt(self) -> str:
-        """Default system prompt for the agent"""
+    def _get_system_prompt(self) -> str:
+        """Get system prompt from template"""
         tools_desc = self.tool_manager.get_tools_description()
         
-        return f"""You are {self.agent_name}, an AI assistant that can use tools to help users.
-
-Available tools:
-{tools_desc}
-
-CRITICAL INSTRUCTIONS:
-1. Analyze the user's request carefully
-2. ONLY use tools when the user specifically asks for:
-   - Password analysis (use password_analyzer)
-   - Hash generation (use hash_generator) 
-   - Code vulnerability checking (use vulnerability_checker)
-   - Current web information (use web_search)
-3. Do NOT use tools for general conversation, questions about yourself, or simple explanations
-4. If you need to use a tool, respond with EXACTLY this JSON format:
-   {{"tool": "tool_name", "parameters": {{"param1": "value1", "param2": "value2"}}}}
-5. Do NOT use markdown code blocks when calling tools - just return the JSON
-6. AFTER you receive tool results, provide a COMPLETE final answer in Russian
-7. Do NOT call the same tool multiple times
-
-For general questions, respond directly in Russian without using any tools.
-
-Example tool call:
-{{"tool": "password_analyzer", "parameters": {{"password": "mypassword123"}}}}"""
+        try:
+            return self.prompt_manager.get_system_prompt(
+                self.prompt_template,
+                agent_name=self.agent_name,
+                tools_desc=tools_desc
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to load prompt template '{self.prompt_template}': {e}")
+            # Fallback to a basic prompt
+            return f"You are {self.agent_name}, an AI assistant. Available tools: {tools_desc}"
     
     def register_tool(self, tool: BaseTool):
         """Register a tool with the agent"""
         self.tool_manager.register_tool(tool)
         # Update system prompt with new tools
-        self.system_prompt = self._get_default_system_prompt()
+        self.system_prompt = self._get_system_prompt()
 
     def process_request(self, user_input: str) -> str:
         """

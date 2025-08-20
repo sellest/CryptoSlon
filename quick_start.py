@@ -13,7 +13,7 @@ from agents.base_agent import BaseAgent
 from agents.tools.security_tool import PasswordAnalyzerTool, HashGeneratorTool
 from agents.tools.search_tool import WebSearchTool
 
-# Minimal logging
+# Уровни логирования
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('httpx').setLevel(logging.ERROR)
 

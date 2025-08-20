@@ -140,5 +140,3 @@ vectorizer.print_report(metrics)
 - **GigaChat** - российская LLM с поддержкой русского языка
 - **Google Gemini** - модели Gemini
 - **Groq** - быстрые модели
-
-Для хакатона будут использоваться модели GigaChat

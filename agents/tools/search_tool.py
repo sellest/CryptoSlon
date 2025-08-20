@@ -4,6 +4,7 @@
 import requests
 import os
 from typing import Dict, Any, List
+from dotenv import load_dotenv
 from agents.base_tool import BaseTool
 
 
@@ -11,9 +12,11 @@ class WebSearchTool(BaseTool):
     """Tool for searching the web using Serper API"""
     
     def __init__(self):
+        # Загружаем переменные окружения из .env файла
+        load_dotenv()
         self.api_key = os.getenv("SERPER_API_KEY")
         if not self.api_key:
-            raise ValueError("SERPER_API_KEY not found in environment variables")
+            raise ValueError("SERPER_API_KEY not found in environment variables. Please add it to your .env file.")
     
     @property
     def name(self) -> str:
@@ -158,6 +161,6 @@ class KnowledgeSearchTool(BaseTool):
             return {
                 "success": False,
                 "error": str(e),
-                "query": search_term,
+                "query": query,
                 "results": []
             }

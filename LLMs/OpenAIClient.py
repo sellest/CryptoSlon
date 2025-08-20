@@ -22,5 +22,5 @@ class OpenAIClient(BaseLLMClient):
     def _invoke(self, prompt: str) -> str:
         return self.chat_client.invoke(prompt).content
 
-    def embed(self, text: str) -> list[float]:
+    def _embed(self, text: str) -> list[float]:
         return self.embed_client.embed_query(text)

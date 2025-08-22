@@ -115,7 +115,7 @@ class BaseChromaDB(BaseVectorDB):
             embedding_dim = 0
             if count > 0:
                 sample_result = self.collection.peek(limit=1)
-                if sample_result['embeddings'] and len(sample_result['embeddings']) > 0:
+                if sample_result.get('embeddings') is not None and len(sample_result['embeddings']) > 0:
                     embedding_dim = len(sample_result['embeddings'][0])
             
             return {
@@ -132,7 +132,7 @@ class BaseChromaDB(BaseVectorDB):
                 all_data = self.collection.get()
                 actual_count = len(all_data.get('ids', []))
                 embedding_dim = 0
-                if all_data.get('embeddings') and len(all_data['embeddings']) > 0:
+                if all_data.get('embeddings') is not None and len(all_data['embeddings']) > 0:
                     embedding_dim = len(all_data['embeddings'][0])
                 
                 return {
@@ -149,3 +149,32 @@ class BaseChromaDB(BaseVectorDB):
                     'model_name': self.model_name,
                     'collection_name': self.collection_name
                 }
+
+    @classmethod
+    def list_all_collections(cls, persist_directory: str = "./chroma_db") -> List[Dict[str, Any]]:
+        """Static method to list all collections without creating a specific collection."""
+        try:
+            client = chromadb.PersistentClient(path=persist_directory)
+            collections = client.list_collections()
+            
+            collection_info = []
+            for collection in collections:
+                try:
+                    count = collection.count()
+                    collection_info.append({
+                        'name': collection.name,
+                        'id': collection.id,
+                        'total_documents': count
+                    })
+                except Exception:
+                    collection_info.append({
+                        'name': collection.name,
+                        'id': collection.id,
+                        'total_documents': 'unknown'
+                    })
+            
+            return collection_info
+            
+        except Exception as e:
+            logging.error(f"Failed to list all collections: {e}")
+            return []

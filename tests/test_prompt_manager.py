@@ -28,7 +28,7 @@ def test_prompt_manager():
     # Test loading template
     try:
         prompt = pm.get_system_prompt(
-            "base_agent_instructions",
+            "example",
             agent_name="TestAgent",
             tools_desc="- test_tool: A test tool"
         )

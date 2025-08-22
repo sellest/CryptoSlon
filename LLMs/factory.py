@@ -1,92 +1,82 @@
-from typing import Optional, Dict, Any
+from typing import List
 from .BaseLLMClient import BaseLLMClient
 from .GigaChatClient import GigaChatClient
-from .GroqClient import GroqClient
 from .OpenAIClient import OpenAIClient
-from .GeminiClient import GeminiClient
 
-# Предустановленные конфигурации для популярных моделей
-PROVIDER_MODELS = {
-    "gigachat": {
-        "default": "GigaChat-2",
-        "base": "GigaChat-2", 
-        "pro": "GigaChat-2-Pro",
-        "max": "GigaChat-2-Max"
-    },
-    "openai": {
-        "default": "gpt-5-mini",
-        "gpt-5": "gpt-5",
-        "gpt-5-nano": "gpt-5-nano",
-    }
+# Model names mapped to their providers and client configurations
+SUPPORTED_MODELS = {
+    # GigaChat models
+    "GigaChat": {"provider": "gigachat", "param_name": "model"},
+    "GigaChat-Plus": {"provider": "gigachat", "param_name": "model"},
+    "GigaChat-Pro": {"provider": "gigachat", "param_name": "model"},
+    "GigaChat-Max": {"provider": "gigachat", "param_name": "model"},
+
+    # OpenAI models
+    "gpt-4": {"provider": "openai", "param_name": "model_name"},
+    "gpt-4-turbo": {"provider": "openai", "param_name": "model_name"},
+    "gpt-4o": {"provider": "openai", "param_name": "model_name"},
+    "gpt-4o-mini": {"provider": "openai", "param_name": "model_name"},
+    "gpt-3.5-turbo": {"provider": "openai", "param_name": "model_name"},
 }
 
-def get_llm_client(
-    provider: str, 
-    model: Optional[str] = None, 
-    **kwargs
-) -> BaseLLMClient:
+# Default model
+DEFAULT_MODEL = "GigaChat"
+
+# Create case-insensitive lookup
+_MODEL_LOOKUP = {model.lower(): model for model in SUPPORTED_MODELS.keys()}
+
+
+def normalize_model_name(user_input: str) -> str:
     """
-    Создает клиент LLM с поддержкой выбора конкретной модели
+    Normalize user input to correct model name (case-insensitive)
     
     Args:
-        provider: Провайдер ("gigachat", "openai", "google", "groq")
-        model: Конкретная модель или алиас (например, "pro", "max", "gpt4")
-        **kwargs: Дополнительные параметры для клиента
+        user_input: User provided model name (any case)
         
     Returns:
-        Экземпляр BaseLLMClient
+        Correct model name with proper casing
+        
+    Raises:
+        ValueError: If model is not supported
     """
-    provider = provider.lower()
+    normalized_input = user_input.lower()
     
-    # Обработка модели и алиасов
-    if model and provider in PROVIDER_MODELS:
-        # Если модель - это алиас, заменяем на полное имя
-        if model.lower() in PROVIDER_MODELS[provider]:
-            model = PROVIDER_MODELS[provider][model.lower()]
-        # Если модель не указана, используем default
-    elif provider in PROVIDER_MODELS:
-        model = PROVIDER_MODELS[provider]["default"]
+    if normalized_input not in _MODEL_LOOKUP:
+        available_models = list(SUPPORTED_MODELS.keys())
+        raise ValueError(f"Model '{user_input}' is not supported. Available models: {available_models}")
+    
+    return _MODEL_LOOKUP[normalized_input]
 
-    # Вызов Gigachat
+
+def get_llm_client(model: str = DEFAULT_MODEL, **kwargs) -> BaseLLMClient:
+    """
+    Creates LLM client based on model name (case-insensitive)
+
+    Args:
+        model: Model name (case-insensitive, e.g., "gigachat-pro", "GPT-4O", "GigaChat-Pro")
+        **kwargs: Additional parameters for the client
+
+    Returns:
+        BaseLLMClient instance
+
+    Raises:
+        ValueError: If model is not supported
+    """
+
+    # Normalize model name to correct casing
+    normalized_model = normalize_model_name(model)
+    
+    model_config = SUPPORTED_MODELS[normalized_model]
+    provider = model_config["provider"]
+    param_name = model_config["param_name"]
+
+    # Set model parameter with correct name for the provider
+    kwargs[param_name] = normalized_model
+
+    # Create client based on provider
     if provider == "gigachat":
-        if model:
-            kwargs["model"] = model
         return GigaChatClient(**kwargs)
-
-    # Вызов ChatGPT
     elif provider == "openai":
-        if model:
-            kwargs["model_name"] = model
         return OpenAIClient(**kwargs)
-        
-    # elif provider == "google":
-    #     if model:
-    #         kwargs["model_name"] = model
-    #     return GeminiClient(**kwargs)
-    #
-    # elif provider == "groq":
-    #     if model:
-    #         kwargs["model_name"] = model
-    #     return GroqClient(**kwargs)
-    #
     else:
-        raise ValueError(f"Unknown LLM provider: {provider}")
-
-def list_available_models(provider: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Возвращает доступные модели
-    
-    Args:
-        provider: Конкретный провайдер или None для всех
-        
-    Returns:
-        Словарь с доступными моделями
-    """
-    if provider:
-        provider = provider.lower()
-        if provider in PROVIDER_MODELS:
-            return {provider: PROVIDER_MODELS[provider]}
-        else:
-            return {}
-    
-    return PROVIDER_MODELS.copy()
+        raise ValueError(f"Provider '{provider}' is not implemented")

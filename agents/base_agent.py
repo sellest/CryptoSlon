@@ -9,7 +9,7 @@ from LLMs.factory import get_llm_client
 from agents.base_tool import BaseTool
 from agents.agent_memory import AgentMemory
 from agents.tool_manager import ToolManager
-from agents.rag_helper import RAGHelper
+from rag.rag_helper import RAGHelper
 
 # Add prompts directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))

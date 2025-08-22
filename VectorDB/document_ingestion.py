@@ -5,15 +5,22 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 from .base_chroma_db import BaseChromaDB
 
+try:
+    import PyPDF2
+    PDF_SUPPORT = True
+except ImportError:
+    PDF_SUPPORT = False
+
 class DocumentIngestion:
     """
-    Handles ingestion of .txt files into ChromaDB vector database.
+    Handles ingestion of text and PDF files into ChromaDB vector database.
     
     Features:
     - Automatic text chunking for better retrieval
     - Metadata extraction from file paths
     - Duplicate detection using content hashes
     - Cybersecurity-focused document processing
+    - Support for .txt and .pdf files
     """
     
     def __init__(self, vector_db: BaseChromaDB, chunk_size: int = 1000, 
@@ -129,6 +136,7 @@ class DocumentIngestion:
             # Extract base metadata
             base_metadata = self.extract_file_metadata(file_path)
             base_metadata['content_hash'] = self.compute_content_hash(content)
+            base_metadata['file_type'] = 'txt'
             
             # Chunk the content
             chunks = self.chunk_text(content)
@@ -157,12 +165,97 @@ class DocumentIngestion:
             self.logger.error(f"Failed to process {file_path}: {e}")
             return []
     
+    def process_pdf_file(self, file_path: Path) -> List[Dict[str, Any]]:
+        """
+        Process a single .pdf file into document chunks with metadata.
+        
+        Returns:
+            List of dictionaries with 'content' and 'metadata' keys
+        """
+        if not PDF_SUPPORT:
+            self.logger.error(f"PDF support not available. Install PyPDF2: pip install PyPDF2")
+            return []
+        
+        try:
+            # Read PDF file
+            content = ""
+            with open(file_path, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                
+                # Extract text from all pages
+                for page_num, page in enumerate(pdf_reader.pages):
+                    try:
+                        page_text = page.extract_text()
+                        if page_text.strip():
+                            content += f"\n--- Страница {page_num + 1} ---\n"
+                            content += page_text + "\n"
+                    except Exception as e:
+                        self.logger.warning(f"Failed to extract text from page {page_num + 1} in {file_path}: {e}")
+                        continue
+            
+            if not content.strip():
+                self.logger.warning(f"No text extracted from PDF: {file_path}")
+                return []
+            
+            # Extract base metadata
+            base_metadata = self.extract_file_metadata(file_path)
+            base_metadata['content_hash'] = self.compute_content_hash(content)
+            base_metadata['file_type'] = 'pdf'
+            
+            # Add PDF-specific metadata
+            try:
+                with open(file_path, 'rb') as file:
+                    pdf_reader = PyPDF2.PdfReader(file)
+                    base_metadata['total_pages'] = len(pdf_reader.pages)
+                    
+                    # Extract PDF metadata if available
+                    if pdf_reader.metadata:
+                        pdf_info = pdf_reader.metadata
+                        if pdf_info.get('/Title'):
+                            base_metadata['pdf_title'] = str(pdf_info['/Title'])
+                        if pdf_info.get('/Author'):
+                            base_metadata['pdf_author'] = str(pdf_info['/Author'])
+                        if pdf_info.get('/Subject'):
+                            base_metadata['pdf_subject'] = str(pdf_info['/Subject'])
+                        if pdf_info.get('/Creator'):
+                            base_metadata['pdf_creator'] = str(pdf_info['/Creator'])
+            except Exception as e:
+                self.logger.warning(f"Could not extract PDF metadata from {file_path}: {e}")
+                base_metadata['total_pages'] = 'unknown'
+            
+            # Chunk the content
+            chunks = self.chunk_text(content)
+            
+            # Prepare document chunks with metadata
+            documents = []
+            for i, chunk in enumerate(chunks):
+                chunk_metadata = base_metadata.copy()
+                chunk_metadata.update({
+                    'chunk_index': i,
+                    'total_chunks': len(chunks),
+                    'chunk_length': len(chunk),
+                    'is_first_chunk': i == 0,
+                    'is_last_chunk': i == len(chunks) - 1
+                })
+                
+                documents.append({
+                    'content': chunk,
+                    'metadata': chunk_metadata
+                })
+            
+            self.logger.info(f"Processed PDF {file_path}: {len(chunks)} chunks from {base_metadata.get('total_pages', 'unknown')} pages")
+            return documents
+            
+        except Exception as e:
+            self.logger.error(f"Failed to process PDF {file_path}: {e}")
+            return []
+    
     def ingest_directory(self, directory_path: str, recursive: bool = True) -> Dict[str, Any]:
         """
-        Ingest all .txt files from a directory into ChromaDB.
+        Ingest all .txt and .pdf files from a directory into ChromaDB.
         
         Args:
-            directory_path: Path to directory containing .txt files
+            directory_path: Path to directory containing .txt and .pdf files
             recursive: Whether to search subdirectories
             
         Returns:
@@ -172,25 +265,39 @@ class DocumentIngestion:
         if not directory.exists():
             raise ValueError(f"Directory does not exist: {directory_path}")
         
-        # Find all .txt files
+        # Find all supported files
+        supported_files = []
         if recursive:
             txt_files = list(directory.rglob("*.txt"))
+            pdf_files = list(directory.rglob("*.pdf"))
         else:
             txt_files = list(directory.glob("*.txt"))
+            pdf_files = list(directory.glob("*.pdf"))
         
-        if not txt_files:
-            self.logger.warning(f"No .txt files found in {directory_path}")
+        supported_files.extend(txt_files)
+        supported_files.extend(pdf_files)
+        
+        if not supported_files:
+            self.logger.warning(f"No .txt or .pdf files found in {directory_path}")
             return {"processed_files": 0, "total_chunks": 0, "errors": 0}
         
-        self.logger.info(f"Found {len(txt_files)} .txt files to process")
+        self.logger.info(f"Found {len(txt_files)} .txt files and {len(pdf_files)} .pdf files to process")
         
         # Process all files
         all_documents = []
         processed_files = 0
         errors = 0
         
-        for file_path in txt_files:
-            documents = self.process_txt_file(file_path)
+        for file_path in supported_files:
+            if file_path.suffix.lower() == '.txt':
+                documents = self.process_txt_file(file_path)
+            elif file_path.suffix.lower() == '.pdf':
+                documents = self.process_pdf_file(file_path)
+            else:
+                self.logger.warning(f"Unsupported file type: {file_path}")
+                errors += 1
+                continue
+                
             if documents:
                 all_documents.extend(documents)
                 processed_files += 1
@@ -214,16 +321,19 @@ class DocumentIngestion:
         }
     
     def ingest_single_file(self, file_path: str) -> Dict[str, Any]:
-        """Ingest a single .txt file into ChromaDB."""
+        """Ingest a single .txt or .pdf file into ChromaDB."""
         file_path_obj = Path(file_path)
         
         if not file_path_obj.exists():
             raise ValueError(f"File does not exist: {file_path}")
         
-        if file_path_obj.suffix.lower() != '.txt':
-            raise ValueError(f"Only .txt files are supported, got: {file_path_obj.suffix}")
-        
-        documents = self.process_txt_file(file_path_obj)
+        file_suffix = file_path_obj.suffix.lower()
+        if file_suffix == '.txt':
+            documents = self.process_txt_file(file_path_obj)
+        elif file_suffix == '.pdf':
+            documents = self.process_pdf_file(file_path_obj)
+        else:
+            raise ValueError(f"Unsupported file type: {file_suffix}. Supported types: .txt, .pdf")
         
         if documents:
             texts = [doc['content'] for doc in documents]

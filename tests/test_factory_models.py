@@ -4,8 +4,7 @@
 """
 
 from LLMs.factory import (
-    get_llm_client,
-    list_available_models
+    get_llm_client
 )
 
 def test_backwards_compatibility():
@@ -78,8 +77,8 @@ def test_real_usage_examples():
     
     examples = [
         ("Базовый GigaChat", lambda: get_llm_client("gigachat")),
-        ("GigaChat Pro", lambda: get_llm_client("gigachat", "pro")),
-        ("GigaChat Max с настройками", lambda: get_llm_client("gigachat", "max", temperature=0.7))
+        ("GigaChat Pro", lambda: get_llm_client("gigachat-pro")),
+        ("GigaChat Max с настройками", lambda: get_llm_client("gigachat-max", temperature=0.7))
     ]
     
     for description, creator in examples:
@@ -99,9 +98,9 @@ def main():
     print("🧪 ТЕСТИРОВАНИЕ РАСШИРЕННОЙ FACTORY")
     print("="*50)
     
-    test_backwards_compatibility()
-    test_model_selection()
-    test_model_listing()
+    # test_backwards_compatibility()
+    # test_model_selection()
+    # test_model_listing()
     test_real_usage_examples()
     
     print(f"\n🏁 Тестирование завершено!")

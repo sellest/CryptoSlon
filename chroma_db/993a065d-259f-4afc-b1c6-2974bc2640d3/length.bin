@@ -1,0 +1,904 @@
+e: Batch x Time x Channel"""
+
+        # if key_value_states are provided this layer is used as a cross-attention layer
+        # for the decoder
+        is_cross_attention = encoder_hidden_states is not None
+        batch_size, seq_length = hidden_states.shape[:2]
+
+        query_states = self.q_proj(hidden_states)
+        query_states = query_states.view(batch_size, seq_length, self.num_heads, self.head_dim).transpose(1, 2)
+
+        if past_key_value is not None:
+            if isinstance(past_key_value, EncoderDecoderCache):
+                is_updated = past_key_value.is_updated.get(self.layer_idx)
+                if is_cross_attention:
+                    # after the first generated id, we can subsequently re-use all key/value_states from cache
+                    curr_past_key_value = past_key_value.cross_attention_cache
+                else:
+                    curr_past_key_value = past_key_value.self_attention_cache
+            else:
+                curr_past_key_value = past_key_value
+
+        current_states = encoder_hidden_states if is_cross_attention else hidden_states
+        if is_cross_attention and past_key_value is not None and is_updated:
+            # reuse k,v, cross_attentions
+            key_states = curr_past_key_value.layers[self.layer_idx].keys
+            value_states = curr_past_key_value.layers[self.layer_idx].values
+        else:
+            key_states = self.k_proj(current_states)
+            value_states = self.v_proj(current_states)
+            key_states = key_states.view(batch_size, -1, self.num_heads, self.head_dim).transpose(1, 2)
+            value_states = value_states.view(batch_size, -1, self.num_heads, self.head_dim).transpose(1, 2)
+
+            if past_key_value is not None:
+                # save all key/value_states to cache to be re-used for fast auto-regressive generation
+                cache_position = cache_position if not is_cross_attention else None
+                key_states, value_states = curr_past_key_value.update(
+                    key_states, value_states, self.layer_idx, {"cache_position": cache_position}
+                )
+                # set flag that curr layer for cross-attn is already updated so we can re-use in subsequent calls
+                if is_cross_attention:
+                    past_key_value.is_updated[self.layer_idx] = True
+
+        attention_interface: Callable = eager_attention_forward
+
+        if self.config._attn_implementation != "eager":
+            if self.config._attn_implementation == "sdpa" and output_attentions:
+                logger.warning_once(
+                    "`torch.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True`. Falling back to "
+                    'eager attention. This warning can be removed using the argument `attn_implementation="eager"` when loading the model.'
+                )
+            else:
+                attention_interface = ALL_ATTENTION_FUNCTIONS[self.config._attn_implementation]
+
+        attn_output, attn_weights = attention_interface(
+            self,
+            query_states,
+            key_states,
+            value_states,
+            attention_mask,
+            dropout=0.0 if not self.training else self.dropout,
+            scaling=self.scaling,
+            **kwargs,
+        )
+
+        attn_output = attn_output.reshape(batch_size, seq_length, -1).contiguous()
+        if self.inner_attn_ln is not None:
+            attn_output = self.inner_attn_ln(attn_output)
+
+        attn_output = self.out_proj(attn_output)
+
+        return attn_output, attn_weights
+
+
+class Kosmos2TextFFN(nn.Module):
+    def __init__(self, config: Kosmos2TextConfig):
+        super().__init__()
+
+        self.dropout = config.dropout
+        self.activation_fn = ACT2FN[config.activation_function]
+        self.activation_dropout = config.activation_dropout
+
+        self.fc1 = nn.Linear(config.embed_dim, config.ffn_dim)
+        self.fc2 = nn.Linear(config.ffn_dim, config.embed_dim)
+
+        self.ffn_layernorm = nn.LayerNorm(config.ffn_dim, eps=config.layer_norm_eps)
+
+    def forward(self, hidden_states):
+        hidden_states = self.activation_fn(self.fc1(hidden_states))
+        hidden_states = nn.functional.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = self.ffn_layernorm(hidden_states)
+        hidden_states = self.fc2(hidden_states)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+
+        return hidden_states
+
+
+class Kosmos2TextBlock(GradientCheckpointingLayer):
+    def __init__(self, config: Kosmos2TextConfig, layer_idx=None):
+        super().__init__()
+        self.embed_dim = config.embed_dim
+
+        self.self_attn = KosmosTextAttention(
+            config,
+            embed_dim=self.embed_dim,
+            num_heads=config.attention_heads,
+            dropout=config.attention_dropout,
+            is_decoder=True,
+            add_inner_attn_layernorm=True,
+            layer_idx=layer_idx,
+        )
+        self.dropout = config.dropout
+        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
+
+        if config.add_cross_attention:
+            self.encoder_attn = KosmosTextAttention(
+                config,
+                embed_dim=self.embed_dim,
+                num_heads=config.attention_heads,
+                dropout=config.attention_dropout,
+                is_decoder=True,
+                add_inner_attn_layernorm=False,
+                layer_idx=layer_idx,
+            )
+            self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
+
+        self.ffn = Kosmos2TextFFN(config)
+        self.final_layer_norm = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
+
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None,
+        encoder_hidden_states: Optional[torch.Tensor] = None,
+        encoder_attention_mask: Optional[torch.Tensor] = None,
+        layer_head_mask: Optional[torch.Tensor] = None,
+        cross_attn_layer_head_mask: Optional[torch.Tensor] = None,
+        past_key_value: Optional[Cache] = None,
+        output_attentions: Optional[bool] = False,
+        use_cache: Optional[bool] = True,
+        cache_position: Optional[torch.Tensor] = None,
+        **kwargs,
+    ) -> tuple[torch.FloatTensor, Optional[tuple[torch.FloatTensor, torch.FloatTensor]]]:
+        residual = hidden_states
+        hidden_states = self.self_attn_layer_norm(hidden_states)
+
+        hidden_states, self_attn_weights = self.self_attn(
+            hidden_states=hidden_states,
+            past_key_value=past_key_value,
+            attention_mask=attention_mask,
+            layer_head_mask=layer_head_mask,
+            output_attentions=output_attentions,
+            cache_position=cache_position,
+            **kwargs,
+        )
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = residual + hidden_states
+
+        # Cross-Attention Block
+        cross_attn_weights = None
+        if encoder_hidden_states is not None:
+            if not hasattr(self, "encoder_attn"):
+                raise ValueError(
+                    f"If `encoder_hidden_states` are passed, {self} has to be instantiated with cross-attention layers"
+                    " by setting `config.add_cross_attention=True`"
+                )
+
+            residual = hidden_states
+            hidden_states = self.encoder_attn_layer_norm(hidden_states)
+
+            hidden_states, cross_attn_weights = self.encoder_attn(
+                hidden_states=hidden_states,
+                encoder_hidden_states=encoder_hidden_states,
+                attention_mask=encoder_attention_mask,
+                layer_head_mask=cross_attn_layer_head_mask,
+                past_key_value=past_key_value,
+                output_attentions=output_attentions,
+                cache_position=cache_position,
+                **kwargs,
+            )
+            hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = residual + hidden_states
+
+        # Fully Connected
+        residual = hidden_states
+
+        hidden_states = self.final_layer_norm(hidden_states)
+
+        # FFN
+        hidden_states = self.ffn(hidden_states)
+        hidden_states = residual + hidden_states
+
+        outputs = (hidden_states,)
+
+        if output_attentions:
+            outputs += (self_attn_weights, cross_attn_weights)
+        return outputs
+
+
+class Kosmos2TextTransformer(nn.Module):
+    """
+    Transformer decoder consisting of `config.layers` layers. Each layer is a [`Kosmos2TextBlock`].
+
+    Args:
+        config: Kosmos2TextConfig
+    """
+
+    def __init__(self, config: Kosmos2TextConfig):
+        super().__init__()
+        self.config = config
+        self.dropout = config.dropout
+        self.layerdrop = config.layerdrop
+
+        self.embed_scale = math.sqrt(config.embed_dim) if config.scale_embedding else 1.0
+        self.embed_tokens = nn.Embedding(config.vocab_size, config.embed_dim, padding_idx=config.pad_token_id)
+
+        self.embed_positions = Kosmos2TextSinusoidalPositionalEmbedding(
+            num_positions=config.max_position_embeddings,
+            embedding_dim=config.embed_dim,
+            padding_idx=config.pad_token_id,
+        )
+
+        self.layers = nn.ModuleList([Kosmos2TextBlock(config, layer_idx=i) for i in range(config.layers)])
+        self.layer_norm = nn.LayerNorm(config.embed_dim, config.layer_norm_eps)
+
+        self.gradient_checkpointing = False
+
+    def _prepare_decoder_attention_mask(self, attention_mask, input_shape, inputs_embeds, past_key_values_length):
+        # create causal mask
+        # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
+        combined_attention_mask = None
+        if input_shape[-1] > 1:
+            combined_attention_mask = _make_causal_mask(
+                input_shape,
+                inputs_embeds.dtype,
+                device=inputs_embeds.device,
+                past_key_values_length=past_key_values_length,
+            )
+
+        if attention_mask is not None:
+            # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
+            expanded_attn_mask = _expand_mask(attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1]).to(
+                inputs_embeds.device
+            )
+            combined_attention_mask = (
+                expanded_attn_mask if combined_attention_mask is None else expanded_attn_mask + combined_attention_mask
+            )
+
+        return combined_attention_mask
+
+    def forward_embedding(
+        self,
+        input_ids,
+        inputs_embeds: Optional[torch.Tensor] = None,
+        image_embeds: Optional[torch.Tensor] = None,
+        img_input_mask: Optional[torch.Tensor] = None,
+        past_key_values_length: int = 0,
+        position_ids: Optional[torch.Tensor] = None,
+    ):
+        # The argument `inputs_embeds` should be the one without being multiplied by `self.embed_scale`.
+        if inputs_embeds is None:
+            inputs_embeds = self.embed_tokens(input_ids)
+
+        if image_embeds is not None:
+            inputs_embeds[img_input_mask.to(dtype=torch.bool)] = image_embeds.to(inputs_embeds.device).view(
+                -1, image_embeds.size(-1)
+            )
+
+        inputs_embeds = inputs_embeds * self.embed_scale
+
+        # embed positions
+        positions = self.embed_positions(
+            input_ids=input_ids,
+            inputs_embeds=inputs_embeds,
+            past_key_values_length=past_key_values_length,
+            position_ids=position_ids,
+        )
+        positions = positions.to(inputs_embeds.device)
+
+        hidden_states = inputs_embeds + positions
+
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+
+        return hidden_states
+
+    def forward(
+        self,
+        input_ids: Optional[torch.Tensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        image_embeds: Optional[torch.Tensor] = None,
+        image_embeds_position_mask: Optional[torch.Tensor] = None,
+        encoder_hidden_states: Optional[torch.Tensor] = None,
+        encoder_attention_mask: Optional[torch.Tensor] = None,
+        head_mask: Optional[torch.Tensor] = None,
+        cross_attn_head_mask: Optional[torch.Tensor] = None,
+        past_key_values: Optional[list[torch.FloatTensor]] = None,
+        inputs_embeds: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.Tensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+        cache_position: Optional[torch.Tensor] = None,
+        **kwargs: Unpack[FlashAttentionKwargs],
+    ) -> Union[tuple, BaseModelOutputWithPastAndCrossAttentions]:
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
+        use_cache = use_cache if use_cache is not None else self.config.use_cache
+
+        if input_ids is not None and inputs_embeds is not None:
+            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
+        elif input_ids is not None:
+            input_shape = input_ids.shape
+            input_ids = input_ids.view(-1, input_shape[-1])
+        elif inputs_embeds is not None:
+            input_shape = inputs_embeds.size()[:-1]
+        else:
+            raise ValueError("You have to specify either input_ids or inputs_embeds")
+
+        if self.gradient_checkpointing and self.training:
+            if use_cache:
+                logger.warning_once(
+                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
+                )
+                use_cache = False
+
+        return_legacy_cache = False
+        if use_cache and not isinstance(past_key_values, Cache):
+            logger.warning_once(
+                "Passing a tuple of `past_key_values` is deprecated and will be removed in Transformers v4.58.0. "
+                "You should pass an instance of `EncoderDecoderCache` instead, e.g. "
+                "`past_key_values=EncoderDecoderCache.from_legacy_cache(past_key_values)`."
+            )
+            return_legacy_cache = True
+            past_key_values = EncoderDecoderCache.from_legacy_cache(past_key_values)
+
+        past_key_values_length = past_key_values.get_seq_length() if past_key_values is not None else 0
+
+        # We don't need img info. when `past_key_values_length` > 0
+        if past_key_values_length > 0:
+            image_embeds = None
+            image_embeds_position_mask = None
+
+        hidden_states = self.forward_embedding(
+            input_ids=input_ids,
+            inputs_embeds=inputs_embeds,
+            image_embeds=image_embeds,
+            img_input_mask=image_embeds_position_mask,
+            past_key_values_length=past_key_values_length,
+            position_ids=position_ids,
+        )
+
+        attention_mask = self._prepare_decoder_attention_mask(
+            attention_mask, input_shape, hidden_states, past_key_values_length
+        )
+
+        # expand encoder attention mask
+        if encoder_hidden_states is not None and encoder_attention_mask is not None:
+            # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
+            encoder_attention_mask = _expand_mask(encoder_attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1])
+
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+
+        # decoder layers
+        all_hidden_states = () if output_hidden_states else None
+        all_self_attns = () if output_attentions else None
+        all_cross_attentions = () if (output_attentions and encoder_hidden_states is not None) else None
+
+        # check if head_mask/cross_attn_head_mask has a correct number of layers specified if desired
+        for attn_mask, mask_name in zip([head_mask, cross_attn_head_mask], ["head_mask", "cross_attn_head_mask"]):
+            if attn_mask is not None:
+                if attn_mask.size()[0] != (len(self.layers)):
+                    raise ValueError(
+                        f"The `{mask_name}` should be specified for {len(self.layers)} layers, but it is for"
+                        f" {head_mask.size()[0]}."
+                    )
+
+        for idx, decoder_layer in enumerate(self.layers):
+            # add LayerDrop (see https://huggingface.co/papers/1909.11556 for description)
+            if output_hidden_states:
+                all_hidden_states += (hidden_states,)
+            if self.training:
+                dropout_probability = torch.rand([])
+                if dropout_probability < self.layerdrop:
+                    continue
+
+            layer_outputs = decoder_layer(
+                hidden_states,
+                attention_mask,
+                encoder_hidden_states,
+                encoder_attention_mask=encoder_attention_mask,
+                layer_head_mask=(head_mask[idx] if head_mask is not None else None),
+                cross_attn_layer_head_mask=(cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None),
+                past_key_value=past_key_values,
+                output_attentions=output_attentions,
+                use_cache=use_cache,
+                cache_position=cache_position,
+                **kwargs,
+            )
+            hidden_states = layer_outputs[0]
+
+            if output_attentions:
+                all_self_attns += (layer_outputs[1],)
+
+                if encoder_hidden_states is not None:
+                    all_cross_attentions += (layer_outputs[2],)
+
+        # add final layer norm
+        hidden_states = self.layer_norm(hidden_states)
+
+        if return_legacy_cache:
+            past_key_values = past_key_values.to_legacy_cache()
+
+        # add hidden states from the last decoder layer
+        if output_hidden_states:
+            all_hidden_states += (hidden_states,)
+
+        return BaseModelOutputWithPastAndCrossAttentions(
+            last_hidden_state=hidden_states,
+            past_key_values=past_key_values,
+            hidden_states=all_hidden_states,
+            attentions=all_self_attns,
+            cross_attentions=all_cross_attentions,
+        )
+
+
+@auto_docstring
+class Kosmos2PreTrainedModel(PreTrainedModel):
+    config: Kosmos2Config
+    supports_gradient_checkpointing = True
+    _no_split_modules = ["Kosmos2VisionEncoderLayer", "Kosmos2TextBlock"]
+    _supports_attention_backend = True
+    _supports_flash_attn = True
+    _supports_sdpa = True
+
+    def _init_weights(self, module: nn.Module):
+        """Initialize the weights"""
+        if isinstance(self, Kosmos2VisionModel):
+            factor = self.config.initializer_factor
+        elif isinstance(self, (Kosmos2Model, Kosmos2ForConditionalGeneration)):
+            factor = self.config.vision_config.initializer_factor
+
+        if isinstance(self, (Kosmos2TextModel, Kosmos2TextForCausalLM)):
+            std = self.config.init_std
+        elif isinstance(self, (Kosmos2Model, Kosmos2ForConditionalGeneration)):
+            std = self.config.text_config.init_std
+
+        if isinstance(module, Kosmos2VisionEmbeddings):
+            nn.init.normal_(module.class_embedding, mean=0.0, std=module.embed_dim**-0.5 * factor)
+            nn.init.normal_(module.patch_embedding.weight, std=module.config.initializer_range * factor)
+            nn.init.normal_(module.position_embedding.weight, std=module.config.initializer_range * factor)
+        elif isinstance(module, Kosmos2VisionAttention):
+            in_proj_std = (module.embed_dim**-0.5) * ((2 * module.config.num_hidden_layers) ** -0.5) * factor
+            out_proj_std = (module.embed_dim**-0.5) * factor
+            nn.init.normal_(module.q_proj.weight, std=in_proj_std)
+            nn.init.normal_(module.k_proj.weight, std=in_proj_std)
+            nn.init.normal_(module.v_proj.weight, std=in_proj_std)
+            nn.init.normal_(module.out_proj.weight, std=out_proj_std)
+        elif isinstance(module, Kosmos2VisionMLP):
+            in_proj_std = (module.config.hidden_size**-0.5) * ((2 * module.config.num_hidden_layers) ** -0.5) * factor
+            fc_std = (2 * module.config.hidden_size) ** -0.5 * factor
+            nn.init.normal_(module.fc1.weight, std=fc_std)
+            nn.init.normal_(module.fc2.weight, std=in_proj_std)
+        elif isinstance(module, KosmosTextAttention):
+            nn.init.normal_(module.q_proj.weight, std=std)
+            nn.init.normal_(module.k_proj.weight, std=std)
+            nn.init.normal_(module.v_proj.weight, std=std)
+            nn.init.normal_(module.out_proj.weight, std=std)
+        elif isinstance(module, Kosmos2TextFFN):
+            nn.init.normal_(module.fc1.weight, std=std)
+            nn.init.normal_(module.fc2.weight, std=std)
+        elif isinstance(module, Kosmos2TextForCausalLM):
+            nn.init.normal_(module.lm_head.weight, std=std)
+        elif isinstance(module, Kosmos2ImageToTextProjection):
+            nn.init.normal_(module.dense.weight, std=std)
+            nn.init.normal_(module.latent_query)
+        elif isinstance(module, Kosmos2TextTransformer):
+            module.embed_tokens.weight.data.normal_(mean=0.0, std=std)
+            if module.embed_tokens.padding_idx is not None:
+                module.embed_tokens.weight.data[module.embed_tokens.padding_idx].zero_()
+        elif isinstance(module, nn.LayerNorm):
+            module.weight.data.fill_(1.0)
+            module.bias.data.zero_()
+
+        if isinstance(module, nn.Linear) and module.bias is not None:
+            module.bias.data.zero_()
+
+
+class Kosmos2VisionModel(Kosmos2PreTrainedModel):
+    config: Kosmos2VisionConfig
+    main_input_name = "pixel_values"
+
+    # Copied from transformers.models.clip.modeling_clip.CLIPVisionModel.__init__ with CLIP_VISION->KOSMOS2_VISION,CLIP->Kosmos2,self.vision_model->self.model
+    def __init__(self, config: Kosmos2VisionConfig):
+        super().__init__(config)
+        self.model = Kosmos2VisionTransformer(config)
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    # Copied from transformers.models.clip.modeling_clip.CLIPVisionModel.get_input_embeddings with CLIP_VISION->KOSMOS2_VISION,CLIP->Kosmos2,self.vision_model->self.model
+    def get_input_embeddings(self) -> nn.Module:
+        return self.model.embeddings.patch_embedding
+
+    @auto_docstring
+    def forward(
+        self,
+        pixel_values: Optional[torch.FloatTensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        interpolate_pos_encoding: bool = False,
+        return_dict: Optional[bool] = None,
+    ) -> Union[tuple, BaseModelOutputWithPooling]:
+        return self.model(
+            pixel_values=pixel_values,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            interpolate_pos_encoding=interpolate_pos_encoding,
+            return_dict=return_dict,
+        )
+
+
+class Kosmos2TextModel(Kosmos2PreTrainedModel):
+    config: Kosmos2TextConfig
+
+    def __init__(self, config: Kosmos2TextConfig):
+        super().__init__(config)
+        self.model = Kosmos2TextTransformer(config)
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def get_input_embeddings(self) -> nn.Module:
+        return self.model.embed_tokens
+
+    @can_return_tuple
+    @auto_docstring
+    def forward(
+        self,
+        input_ids: Optional[torch.Tensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        image_embeds: Optional[torch.Tensor] = None,
+        image_embeds_position_mask: Optional[torch.Tensor] = None,
+        encoder_hidden_states: Optional[torch.Tensor] = None,
+        encoder_attention_mask: Optional[torch.Tensor] = None,
+        head_mask: Optional[torch.Tensor] = None,
+        cross_attn_head_mask: Optional[torch.Tensor] = None,
+        past_key_values: Optional[list[torch.FloatTensor]] = None,
+        inputs_embeds: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.Tensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+        cache_position: Optional[torch.Tensor] = None,
+        **kwargs: Unpack[FlashAttentionKwargs],
+    ) -> Union[tuple, BaseModelOutputWithPastAndCrossAttentions]:
+        r"""
+        image_embeds (`torch.FloatTensor` of shape `(batch_size, latent_query_num, hidden_size)`, *optional*):
+            Sequence of hidden-states at the output of `Kosmos2ImageToTextProjection`.
+        image_embeds_position_mask (`torch.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Mask to indicate the location in a sequence to insert the image features . Mask values selected in `[0,
+            1]`:
+
+            - 1 for places where to put the image features,
+            - 0 for places that are not for image features (i.e. for text tokens).
+        cross_attn_head_mask (`torch.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
+            Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
+
+            - 1 indicates the head is **not masked**,
+            - 0 indicates the head is **masked**.
+        """
+        return self.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            image_embeds=image_embeds,
+            image_embeds_position_mask=image_embeds_position_mask,
+            encoder_hidden_states=encoder_hidden_states,
+            encoder_attention_mask=encoder_attention_mask,
+            head_mask=head_mask,
+            cross_attn_head_mask=cross_attn_head_mask,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            position_ids=position_ids,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+            cache_position=cache_position,
+            **kwargs,
+        )
+
+
+@auto_docstring(
+    custom_intro="""
+    The text model from KOSMOS-2 with a language modeling head on top (linear layer with weights tied to the input
+    embeddings).
+    """
+)
+class Kosmos2TextForCausalLM(Kosmos2PreTrainedModel, GenerationMixin):
+    config: Kosmos2TextConfig
+    _tied_weights_keys = ["lm_head.weight"]
+
+    def __init__(self, config: Kosmos2TextConfig):
+        super().__init__(config)
+
+        self.model = Kosmos2TextTransformer(config)
+        self.lm_head = nn.Linear(in_features=config.embed_dim, out_features=config.vocab_size, bias=False)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def get_input_embeddings(self) -> nn.Module:
+        return self.model.embed_tokens
+
+    def get_output_embeddings(self) -> nn.Module:
+        return self.lm_head
+
+    @can_return_tuple
+    @auto_docstring
+    def forward(
+        self,
+        input_ids: Optional[torch.Tensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        image_embeds: Optional[torch.Tensor] = None,
+        image_embeds_position_mask: Optional[torch.Tensor] = None,
+        encoder_hidden_states: Optional[torch.Tensor] = None,
+        encoder_attention_mask: Optional[torch.Tensor] = None,
+        head_mask: Optional[torch.Tensor] = None,
+        cross_attn_head_mask: Optional[torch.Tensor] = None,
+        past_key_values: Optional[list[torch.FloatTensor]] = None,
+        inputs_embeds: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.Tensor] = None,
+        labels: Optional[torch.LongTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+        cache_position: Optional[torch.Tensor] = None,
+        **kwargs: Unpack[TransformersKwargs],
+    ) -> Union[tuple, CausalLMOutputWithCrossAttentions]:
+        r"""
+        image_embeds (`torch.FloatTensor` of shape `(batch_size, latent_query_num, hidden_size)`, *optional*):
+            Sequence of hidden-states at the output of `Kosmos2ImageToTextProjection`.
+        image_embeds_position_mask (`torch.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Mask to indicate the location in a sequence to insert the image features . Mask values selected in `[0,
+            1]`:
+
+            - 1 for places where to put the image features,
+            - 0 for places that are not for image features (i.e. for text tokens).
+        cross_attn_head_mask (`torch.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
+            Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
+
+            - 1 indicates the head is **not masked**,
+            - 0 indicates the head is **masked**.
+        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
+            `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
+            ignored (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        if labels is not None:
+            if use_cache:
+                logger.warning("The `use_cache` argument is changed to `False` since `labels` is provided.")
+            use_cache = False
+
+        outputs = self.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            image_embeds=image_embeds,
+            image_embeds_position_mask=image_embeds_position_mask,
+            encoder_hidden_states=encoder_hidden_states,
+            encoder_attention_mask=encoder_attention_mask,
+            head_mask=head_mask,
+            cross_attn_head_mask=cross_attn_head_mask,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            position_ids=position_ids,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=True,
+            cache_position=cache_position,
+            **kwargs,
+        )
+        lm_logits = self.lm_head(outputs[0])
+
+        loss = None
+        if labels is not None:
+            loss = self.loss_function(logits=lm_logits, labels=labels, vocab_size=self.config.vocab_size, **kwargs)
+
+        return CausalLMOutputWithCrossAttentions(
+            loss=loss,
+            logits=lm_logits,
+            past_key_values=outputs.past_key_values,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+            cross_attentions=outputs.cross_attentions,
+        )
+
+    def prepare_inputs_for_generation(
+        self,
+        input_ids,
+        image_embeds=None,
+        image_embeds_position_mask=None,
+        past_key_values=None,
+        attention_mask=None,
+        inputs_embeds=None,
+        use_cache=None,
+        cache_position=None,
+        **model_kwargs,
+    ):
+        # Overwritten -- in specific circumstances we don't want to forward image inputs to the model
+
+        # If we're in cached decoding stage, pixel values should be None because input ids do not contain special image token anymore
+        if cache_position[0] != 0:
+            image_embeds = None
+            image_embeds_position_mask = None
+
+        # appending `False` to `image_embeds_position_mask` (because `input_ids` grows during generation)
+        elif image_embeds_position_mask is not None:
+            batch_size, seq_len = inputs_embeds.size()[:-1] if inputs_embeds is not None else input_ids.size()
+            mask_len = image_embeds_position_mask.size()[-1]
+            image_embeds_position_mask = torch.cat(
+                (
+                    image_embeds_position_mask,
+                    torch.zeros(size=(batch_size, seq_len - mask_len), dtype=torch.bool, device=input_ids.device),
+                ),
+                dim=1,
+            )
+
+        model_inputs = super().prepare_inputs_for_generation(
+            input_ids,
+            past_key_values=past_key_values,
+            attention_mask=attention_mask,
+            image_embeds=image_embeds,
+            image_embeds_position_mask=image_embeds_position_mask,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            cache_position=cache_position,
+            **model_kwargs,
+        )
+        # Kosmos2 has offset for position ids, so we need to create them correctly in PositionEmbedding layer
+        model_inputs.pop("position_ids", None)
+
+        return model_inputs
+
+
+class Kosmos2ImageToTextProjection(nn.Module):
+    """The layer that transforms the image model's output to part of the text model's input (namely, image features)"""
+
+    def __init__(self, config: Kosmos2Config):
+        super().__init__()
+        self.dense = nn.Linear(config.vision_config.hidden_size, config.text_config.embed_dim)
+        self.latent_query = nn.Parameter(torch.randn(config.latent_query_num, config.text_config.embed_dim))
+
+        self.x_attn = KosmosTextAttention(
+            config.text_config,
+            config.text_config.embed_dim,
+            config.text_config.attention_heads,
+            dropout=config.text_config.attention_dropout,
+            is_decoder=False,
+            add_inner_attn_layernorm=False,
+        )
+
+    def forward(self, features):
+        hidden_states = self.dense(features)
+
+        # shape = [batch, latent_query_num, h_dim]
+        latent_query = self.latent_query.unsqueeze(0).expand(hidden_states.size(0), -1, -1)
+        key_value_states = torch.cat([hidden_states, latent_query], dim=1)
+
+        hidden_states, attn_weights = self.x_attn(
+            hidden_states=latent_query,
+            encoder_hidden_states=key_value_states,
+            past_key_value=None,
+            attention_mask=None,
+            output_attentions=None,
+        )
+
+        return hidden_states, attn_weights
+
+
+@auto_docstring(
+    custom_intro="""
+    KOSMOS-2 Model for generating text and image features. The model consists of a vision encoder and a language model.
+    """
+)
+class Kosmos2Model(Kosmos2PreTrainedModel):
+    config: Kosmos2Config
+    main_input_name = "pixel_values"
+
+    def __init__(self, config: Kosmos2Config):
+        super().__init__(config)
+
+        self.text_model = Kosmos2TextModel(config.text_config)
+        self.vision_model = Kosmos2VisionModel(config.vision_config)
+        self.image_to_text_projection = Kosmos2ImageToTextProjection(config)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def get_input_embeddings(self) -> nn.Module:
+        return self.text_model.model.embed_tokens
+
+    def set_input_embeddings(self, value):
+        self.text_model.model.embed_tokens = value
+
+    def get_image_features(
+        self,
+        pixel_values: torch.FloatTensor,
+        return_attentions: Optional[bool] = False,
+        interpolate_pos_encoding: Optional[bool] = False,
+    ):
+        """
+        Encodes images into continuous embeddings that can be forwarded to the language model.
+
+        Args:
+            pixel_values (`torch.FloatTensor` of shape `(batch_size, num_channels, image_size, image_size)`):
+                The tensors corresponding to the input images.
+            return_attentions (`bool`, *optional*, defaults to `False`):
+                Whether to return `projection_attentions` or not.
+            interpolate_pos_encoding (`bool`, *optional*, defaults to `False`):
+                Whether to interpolate positional embeddings or not.
+        """
+        vision_model_output = self.vision_model(
+            pixel_values=pixel_values,
+            interpolate_pos_encoding=interpolate_pos_encoding,
+        )
+        # The whole `last_hidden_state` through `post_layernorm` instead of just `pooled_output`.
+        image_embeds = self.vision_model.model.post_layernorm(vision_model_output[0])
+        # normalized features
+        image_embeds = nn.functional.normalize(image_embeds, dim=-1)
+        image_embeds, projection_attentions = self.image_to_text_projection(image_embeds)
+
+        if return_attentions:
+            return image_embeds, projection_attentions
+        return image_embeds
+
+    @can_return_tuple
+    @auto_docstring
+    def forward(
+        self,
+        pixel_values: Optional[torch.Tensor] = None,
+        input_ids: Optional[torch.Tensor] = None,
+        image_embeds_position_mask: Optional[torch.Tensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        head_mask: Optional[torch.Tensor] = None,
+        past_key_values: Optional[list[torch.FloatTensor]] = None,
+        image_embeds: Optional[torch.Tensor] = None,
+        inputs_embeds: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.Tensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        interpolate_pos_encoding: bool = False,
+        return_dict: Optional[bool] = None,
+        **kwargs: Unpack[FlashAttentionKwargs],
+    ) -> Union[tuple, Kosmos2ModelOutput]:
+        r"""
+        image_embeds_position_mask (`torch.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Mask to indicate the location in a sequence to insert the image features . Mask values selected in `[0,
+            1]`:
+
+            - 1 for places where to put the image features,
+            - 0 for places that are not for image features (i.e. for text tokens).
+        image_embeds (`torch.FloatTensor` of shape `(batch_size, latent_query_num, hidden_size)`, *optional*):
+            Sequence of hidden-states at the output of `Kosmos2ImageToTextProjection`.
+
+        Examples:
+
+        ```python
+        >>> from PIL import Image
+        >>> import requests
+        >>> from transformers import AutoProcessor, Kosmos2Model
+
+        >>> model = Kosmos2Model.from_pretrained("microsoft/kosmos-2-patch14-224")
+        >>> processor = AutoProcessor.from_pretrained("microsoft/kosmos-2-patch14-224")
+
+        >>> url = "https://huggingface.co/microsoft/kosmos-2-patch14-224/resolve/main/snowman.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+
+        >>> text = (
+        ...     "<grounding> An image of<phrase> a snowman</phrase><object><patch_index_0044><patch_index_0863>"
+        ...     "</object> warming himself by<phrase> a fire</phrase><object><patch_index_0005><patch_index_0911>"
+        ...     "</object>"
+        ... )
+
+        >>> inputs = processor(text=text, images=image, return_tensors="pt", add_eos_token=True)
+
+        >>> last_hidden_state = model(
+        ...     pixel_values=inputs["pixel_values"],
+        ...     input_ids=inputs["input_ids"],
+        ...     attention_mask=inputs["attention_mask"],
+        ...     image_embeds_position_mask=inputs["image_embeds_position_mask"],
+        ... ).last_hidden_state
+        >>> list(last_hidden_state.shape)
+        [1, 91, 2048]
+        ```"""
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
+        return_dict = r

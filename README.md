@@ -126,7 +126,7 @@ vectorizer.print_report(metrics)
 metrics = vectorizer.clean_and_add(files)
 vectorizer.print_report(metrics)
 ```
-Пример: [Test VectorizeDocuments](tests/test_vectorize_documents.py)
+Пример: [Test VectorizeDocuments](VectorDB/test_vectorize_documents.py)
 
 ### 4. Использование RAG системы
 Подробнее смотри в гайд о RAG, который я добавлю в /docs когда-нибудь

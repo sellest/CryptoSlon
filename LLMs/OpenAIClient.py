@@ -12,7 +12,7 @@ class OpenAIClient(BaseLLMClient):
         self.chat_client = ChatOpenAI(
             api_key=api_key,
             model=model_name,
-            temperature=0.7,
+            temperature=1,
         )
         self.embed_client = OpenAIEmbeddings(
             api_key=api_key,

@@ -1,0 +1,476 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "toolExecutionNotifications": [
+            {
+              "descriptor": {
+                "id": "Syntax error"
+              },
+              "level": "warning",
+              "message": {
+                "text": "Syntax error at line /Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_copy/tsapp/routes.py:436:\n `from` was unexpected"
+              }
+            }
+          ]
+        }
+      ],
+      "results": [
+        {
+          "fingerprints": {
+            "matchBasedId/v1": "requires login"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_copy/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "endColumn": 18,
+                  "endLine": 17,
+                  "snippet": {
+                    "text": "if __name__ == '__main__':\n    with app.app_context():\n        db.create_all()\n        app.run()"
+                  },
+                  "startColumn": 1,
+                  "startLine": 14
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что __name__ не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n"
+          },
+          "properties": {},
+          "ruleId": "rules.flask-privilege-magic-role-check"
+        },
+        {
+          "fingerprints": {
+            "matchBasedId/v1": "requires login"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_copy/tsapp/func.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "endColumn": 19,
+                  "endLine": 25,
+                  "snippet": {
+                    "text": "    if rid == 2:\n        res = True"
+                  },
+                  "startColumn": 5,
+                  "startLine": 24
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n"
+          },
+          "properties": {},
+          "ruleId": "rules.flask-privilege-magic-role-check"
+        },
+        {
+          "fingerprints": {
+            "matchBasedId/v1": "requires login"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_copy/tsapp/func.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "endColumn": 23,
+                  "endLine": 28,
+                  "snippet": {
+                    "text": "    if rid == 1:\n        if task.private == False or (task.uid1 == uid and task.private == True):\n            res = True"
+                  },
+                  "startColumn": 5,
+                  "startLine": 26
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n"
+          },
+          "properties": {},
+          "ruleId": "rules.flask-privilege-magic-role-check"
+        },
+        {
+          "fingerprints": {
+            "matchBasedId/v1": "requires login"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_copy/tsapp/func.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "endColumn": 23,
+                  "endLine": 31,
+                  "snippet": {
+                    "text": "    if rid == 0:\n        if task.uid1 == uid:\n            res = True"
+                  },
+                  "startColumn": 5,
+                  "startLine": 29
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n"
+          },
+          "properties": {},
+          "ruleId": "rules.flask-privilege-magic-role-check"
+        },
+        {
+          "fingerprints": {
+            "matchBasedId/v1": "requires login"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_copy/tsapp/func.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "endColumn": 23,
+                  "endLine": 31,
+                  "snippet": {
+                    "text": "        if task.uid1 == uid:\n            res = True"
+                  },
+                  "startColumn": 9,
+                  "startLine": 30
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что task.uid1 не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n"
+          },
+          "properties": {},
+          "ruleId": "rules.flask-privilege-magic-role-check"
+        },
+        {
+          "fingerprints": {
+            "matchBasedId/v1": "requires login"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_copy/tsapp/func.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "endColumn": 61,
+                  "endLine": 37,
+                  "snippet": {
+                    "text": "    token = jwt.encode(jwt_data, JWT_KEY, algorithm=\"HS256\")"
+                  },
+                  "startColumn": 13,
+                  "startLine": 37
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "CWE-640 (эвристика): jwt.encode() без поля exp в payload. Добавьте 'exp' и проверяйте истечение срока.\n"
+          },
+          "properties": {},
+          "ruleId": "rules.jwt-encode-without-exp-claim"
+        },
+        {
+          "fingerprints": {
+            "matchBasedId/v1": "requires login"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_copy/tsapp/sconfig.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "endColumn": 31,
+                  "endLine": 3,
+                  "snippet": {
+                    "text": "SECRET_KEY = 'CTF-2#SecretKey'"
+                  },
+                  "startColumn": 1,
+                  "startLine": 3
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Захардкоженный секрет (CWE-798). Храните SECRET_KEY/JWT_KEY в переменных окружения или в секрет-хранилище.\n"
+          },
+          "properties": {},
+          "ruleId": "rules.flask-hardcoded-secrets"
+        },
+        {
+          "fingerprints": {
+            "matchBasedId/v1": "requires login"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_copy/tsapp/sconfig.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "endColumn": 30,
+                  "endLine": 4,
+                  "snippet": {
+                    "text": "JWT_KEY = 'CTF-2#PirateLabel'"
+                  },
+                  "startColumn": 1,
+                  "startLine": 4
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Захардкоженный секрет (CWE-798). Храните SECRET_KEY/JWT_KEY в переменных окружения или в секрет-хранилище.\n"
+          },
+          "properties": {},
+          "ruleId": "rules.flask-hardcoded-secrets"
+        }
+      ],
+      "tool": {
+        "driver": {
+          "name": "Semgrep OSS",
+          "rules": [
+            {
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "fullDescription": {
+                "text": "Захардкоженный секрет (CWE-798). Храните SECRET_KEY/JWT_KEY в переменных окружения или в секрет-хранилище.\n"
+              },
+              "help": {
+                "markdown": "Захардкоженный секрет (CWE-798). Храните SECRET_KEY/JWT_KEY в переменных окружения или в секрет-хранилище.\n",
+                "text": "Захардкоженный секрет (CWE-798). Храните SECRET_KEY/JWT_KEY в переменных окружения или в секрет-хранилище.\n"
+              },
+              "id": "rules.flask-hardcoded-secrets",
+              "name": "rules.flask-hardcoded-secrets",
+              "properties": {
+                "precision": "very-high",
+                "tags": []
+              },
+              "shortDescription": {
+                "text": "Semgrep Finding: rules.flask-hardcoded-secrets"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "fullDescription": {
+                "text": "CWE-640 (эвристика): маршрут допускает метод GET и меняет пароль. Смена пароля по GET небезопасна. Используйте POST и проверяйте токен/TTL/одноразовость.\n"
+              },
+              "help": {
+                "markdown": "CWE-640 (эвристика): маршрут допускает метод GET и меняет пароль. Смена пароля по GET небезопасна. Используйте POST и проверяйте токен/TTL/одноразовость.\n",
+                "text": "CWE-640 (эвристика): маршрут допускает метод GET и меняет пароль. Смена пароля по GET небезопасна. Используйте POST и проверяйте токен/TTL/одноразовость.\n"
+              },
+              "id": "rules.flask-passrec-get-route-password-change",
+              "name": "rules.flask-passrec-get-route-password-change",
+              "properties": {
+                "precision": "very-high",
+                "tags": []
+              },
+              "shortDescription": {
+                "text": "Semgrep Finding: rules.flask-passrec-get-route-password-change"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "fullDescription": {
+                "text": "CWE-640: Пароль берётся из URL (request.args). Пароли нельзя передавать через query string — используйте POST/JSON тело и защищайте CSRF/TTL/одноразовость токенов.\n"
+              },
+              "help": {
+                "markdown": "CWE-640: Пароль берётся из URL (request.args). Пароли нельзя передавать через query string — используйте POST/JSON тело и защищайте CSRF/TTL/одноразовость токенов.\n",
+                "text": "CWE-640: Пароль берётся из URL (request.args). Пароли нельзя передавать через query string — используйте POST/JSON тело и защищайте CSRF/TTL/одноразовость токенов.\n"
+              },
+              "id": "rules.flask-passrec-password-in-get",
+              "name": "rules.flask-passrec-password-in-get",
+              "properties": {
+                "precision": "very-high",
+                "tags": []
+              },
+              "shortDescription": {
+                "text": "Semgrep Finding: rules.flask-passrec-password-in-get"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "fullDescription": {
+                "text": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что $RID не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n"
+              },
+              "help": {
+                "markdown": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что $RID не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+                "text": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что $RID не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n"
+              },
+              "id": "rules.flask-privilege-magic-role-check",
+              "name": "rules.flask-privilege-magic-role-check",
+              "properties": {
+                "precision": "very-high",
+                "tags": []
+              },
+              "shortDescription": {
+                "text": "Semgrep Finding: rules.flask-privilege-magic-role-check"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "fullDescription": {
+                "text": "Возможная проблема управления привилегиями (CWE-269): роль/уровень доступа читается из клиентского cookie. Не доверяйте request.cookies для ACL. Храните роль в серверной сессии/БД (current_user), а не в cookie.\n"
+              },
+              "help": {
+                "markdown": "Возможная проблема управления привилегиями (CWE-269): роль/уровень доступа читается из клиентского cookie. Не доверяйте request.cookies для ACL. Храните роль в серверной сессии/БД (current_user), а не в cookie.\n",
+                "text": "Возможная проблема управления привилегиями (CWE-269): роль/уровень доступа читается из клиентского cookie. Не доверяйте request.cookies для ACL. Храните роль в серверной сессии/БД (current_user), а не в cookie.\n"
+              },
+              "id": "rules.flask-privilege-role-from-cookie",
+              "name": "rules.flask-privilege-role-from-cookie",
+              "properties": {
+                "precision": "very-high",
+                "tags": []
+              },
+              "shortDescription": {
+                "text": "Semgrep Finding: rules.flask-privilege-role-from-cookie"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "fullDescription": {
+                "text": "Возможная SSTI (CWE-1336): пользовательский ввод попадает в render_template_string(). Проверьте, что строка не формируется из request.args/request.form/request.values/JSON.\n"
+              },
+              "help": {
+                "markdown": "Возможная SSTI (CWE-1336): пользовательский ввод попадает в render_template_string(). Проверьте, что строка не формируется из request.args/request.form/request.values/JSON.\n",
+                "text": "Возможная SSTI (CWE-1336): пользовательский ввод попадает в render_template_string(). Проверьте, что строка не формируется из request.args/request.form/request.values/JSON.\n"
+              },
+              "id": "rules.flask-ssti-render-template-string-taint",
+              "name": "rules.flask-ssti-render-template-string-taint",
+              "properties": {
+                "precision": "very-high",
+                "tags": []
+              },
+              "shortDescription": {
+                "text": "Semgrep Finding: rules.flask-ssti-render-template-string-taint"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "fullDescription": {
+                "text": "Эвристика SSTI/XSS: вывод помечен как |safe. Убедитесь, что данные не из пользовательского ввода, либо используйте экранирование.\n"
+              },
+              "help": {
+                "markdown": "Эвристика SSTI/XSS: вывод помечен как |safe. Убедитесь, что данные не из пользовательского ввода, либо используйте экранирование.\n",
+                "text": "Эвристика SSTI/XSS: вывод помечен как |safe. Убедитесь, что данные не из пользовательского ввода, либо используйте экранирование.\n"
+              },
+              "id": "rules.jinja-safe-filter-user-input",
+              "name": "rules.jinja-safe-filter-user-input",
+              "properties": {
+                "precision": "very-high",
+                "tags": []
+              },
+              "shortDescription": {
+                "text": "Semgrep Finding: rules.jinja-safe-filter-user-input"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "fullDescription": {
+                "text": "CWE-640 (эвристика): jwt.encode() без поля exp в payload. Добавьте 'exp' и проверяйте истечение срока.\n"
+              },
+              "help": {
+                "markdown": "CWE-640 (эвристика): jwt.encode() без поля exp в payload. Добавьте 'exp' и проверяйте истечение срока.\n",
+                "text": "CWE-640 (эвристика): jwt.encode() без поля exp в payload. Добавьте 'exp' и проверяйте истечение срока.\n"
+              },
+              "id": "rules.jwt-encode-without-exp-claim",
+              "name": "rules.jwt-encode-without-exp-claim",
+              "properties": {
+                "precision": "very-high",
+                "tags": []
+              },
+              "shortDescription": {
+                "text": "Semgrep Finding: rules.jwt-encode-without-exp-claim"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "fullDescription": {
+                "text": "Утечка чувствительных данных через логи (CWE-532): строка логирования содержит 'password'. Не логируйте пароли/секреты; маскируйте значения.\n"
+              },
+              "help": {
+                "markdown": "Утечка чувствительных данных через логи (CWE-532): строка логирования содержит 'password'. Не логируйте пароли/секреты; маскируйте значения.\n",
+                "text": "Утечка чувствительных данных через логи (CWE-532): строка логирования содержит 'password'. Не логируйте пароли/секреты; маскируйте значения.\n"
+              },
+              "id": "rules.logging-passwords",
+              "name": "rules.logging-passwords",
+              "properties": {
+                "precision": "very-high",
+                "tags": []
+              },
+              "shortDescription": {
+                "text": "Semgrep Finding: rules.logging-passwords"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "fullDescription": {
+                "text": "Возможная инъекция кода: eval/exec с пользовательским вводом. Никогда не передавайте значения из request.* в eval/exec.\n"
+              },
+              "help": {
+                "markdown": "Возможная инъекция кода: eval/exec с пользовательским вводом. Никогда не передавайте значения из request.* в eval/exec.\n",
+                "text": "Возможная инъекция кода: eval/exec с пользовательским вводом. Никогда не передавайте значения из request.* в eval/exec.\n"
+              },
+              "id": "rules.python-eval-exec-taint",
+              "name": "rules.python-eval-exec-taint",
+              "properties": {
+                "precision": "very-high",
+                "tags": []
+              },
+              "shortDescription": {
+                "text": "Semgrep Finding: rules.python-eval-exec-taint"
+              }
+            }
+          ],
+          "semanticVersion": "1.132.0"
+        }
+      }
+    }
+  ],
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/schemas/sarif-schema-2.1.0.json"
+}

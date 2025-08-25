@@ -1,0 +1,367 @@
+#!/usr/bin/env python3
+"""
+SARIF Report Merger - Combines semgrep and bandit SARIF reports.
+Categorizes findings as "both", "semgrep", or "bandit" based on location matching.
+"""
+
+import json
+from pathlib import Path
+from typing import Dict, List, Set, Tuple
+
+
+class SARIFReportMerger:
+    def __init__(self, semgrep_sarif_path: str, bandit_sarif_path: str, mappings_file: str = None):
+        self.semgrep_path = Path(semgrep_sarif_path)
+        self.bandit_path = Path(bandit_sarif_path)
+        
+        # Load rule mappings from external file
+        if mappings_file is None:
+            mappings_file = Path(__file__).parent / "rule_mappings.json"
+        
+        self.rule_to_cwe = self._load_rule_mappings(mappings_file)
+    
+    def _load_rule_mappings(self, mappings_file: Path) -> Dict[str, str]:
+        """Load rule to CWE mappings from external JSON file."""
+        try:
+            with open(mappings_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # Combine semgrep and bandit rules into one mapping
+            mappings = {}
+            mappings.update(data.get("rule_to_cwe", {}).get("semgrep_rules", {}))
+            mappings.update(data.get("rule_to_cwe", {}).get("bandit_rules", {}))
+            
+            # Store CWE severity mappings and descriptions
+            self.cwe_severity_mappings = data.get("cwe_severity_mapping", {})
+            self.cwe_descriptions = data.get("cwe_descriptions", {})
+            
+            print(f"Loaded {len(mappings)} rule mappings from {mappings_file}")
+            return mappings
+            
+        except FileNotFoundError:
+            print(f"Warning: Mappings file {mappings_file} not found. Using empty mappings.")
+            self.cwe_severity_mappings = {}
+            self.cwe_descriptions = {}
+            return {}
+        except json.JSONDecodeError as e:
+            print(f"Warning: Invalid JSON in {mappings_file}: {e}. Using empty mappings.")
+            self.cwe_severity_mappings = {}
+            self.cwe_descriptions = {}
+            return {}
+        
+    def load_sarif(self, sarif_path: Path) -> Dict:
+        """Load and parse SARIF file."""
+        with open(sarif_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    
+    def extract_findings(self, sarif_data: Dict, tool_name: str) -> List[Dict]:
+        """Extract findings from SARIF data with normalized structure."""
+        findings = []
+        
+        for run in sarif_data.get("runs", []):
+            for result in run.get("results", []):
+                # Extract location info
+                locations = result.get("locations", [])
+                if not locations:
+                    continue
+                    
+                location = locations[0].get("physicalLocation", {})
+                artifact = location.get("artifactLocation", {})
+                region = location.get("region", {})
+                
+                file_path = self._normalize_file_path(artifact.get("uri", ""))
+                start_line = region.get("startLine", 0)
+                end_line = region.get("endLine", start_line)
+                
+                # Extract code snippet
+                snippet = self._extract_snippet(location)
+                
+                # Create normalized finding
+                original_rule_id = result.get("ruleId", "unknown")
+                cwe_id = self._convert_to_cwe(original_rule_id)
+                finding = {
+                    "tool": tool_name,
+                    "rule_id": cwe_id,
+                    "rule_description": self.cwe_descriptions.get(cwe_id, ""),
+                    "original_rule_id": original_rule_id,
+                    "message": result.get("message", {}).get("text", ""),
+                    "file_path": file_path,
+                    "start_line": start_line,
+                    "end_line": end_line,
+                    "severity": self._get_severity_for_cwe(cwe_id, result),
+                    "snippet": snippet,
+                    "location_key": f"{file_path}:{start_line}-{end_line}",
+                    "original_result": result
+                }
+                
+                findings.append(finding)
+        
+        return findings
+    
+    def _extract_severity(self, result: Dict) -> str:
+        """Extract severity from SARIF result."""
+        # Check for level in result
+        level = result.get("level", "")
+        if level:
+            return self._normalize_severity(level)
+            
+        # Check for severity in properties
+        properties = result.get("properties", {})
+        if "severity" in properties:
+            return self._normalize_severity(properties["severity"])
+            
+        return "LOW"
+    
+    def _normalize_severity(self, severity: str) -> str:
+        """Normalize severity levels to LOW/MEDIUM/HIGH."""
+        severity_lower = severity.lower()
+        
+        if severity_lower in ["error", "high"]:
+            return "HIGH"
+        elif severity_lower in ["warning", "medium"]:
+            return "MEDIUM"
+        elif severity_lower in ["note", "info", "low"]:
+            return "LOW"
+        else:
+            return "LOW"  # default fallback
+    
+    def _normalize_file_path(self, file_path: str) -> str:
+        """Normalize file path by removing file:// URI prefix and making it relative."""
+        # # Remove file:// URI prefix first
+        # if file_path.startswith("file://"):
+        #     file_path = file_path[7:]  # Remove "file://"
+        # elif file_path.startswith("file:/"):
+        #     file_path = file_path[6:]  # Remove "file:/"
+        
+        # Make path relative by finding the SAST/taskstate part
+        if "/taskstate" in file_path:
+            # Extract everything from /taskstate onwards
+            sast_index = file_path.find("/taskstate")
+            return file_path[sast_index:]  # +5 to skip "/SAST" part, keeping "/taskstate"
+        
+        return file_path
+    
+    def _convert_to_cwe(self, rule_id: str) -> str:
+        """Convert tool-specific rule ID to CWE format."""
+        return self.rule_to_cwe.get(rule_id, rule_id)
+    
+    def _get_severity_for_cwe(self, cwe_id: str, sarif_result: Dict) -> str:
+        """Get severity based on CWE mapping first, then fall back to SARIF severity."""
+        # First, try to get severity from CWE mapping
+        for severity_level, cwe_list in self.cwe_severity_mappings.items():
+            if cwe_id in cwe_list:
+                return severity_level
+        
+        # Fall back to SARIF-based severity extraction
+        return self._extract_severity(sarif_result)
+    
+    def _extract_snippet(self, location: Dict) -> str:
+        """Extract code snippet from SARIF location."""
+        # Try to get snippet from region
+        region = location.get("region", {})
+        snippet = region.get("snippet", {})
+        if snippet and "text" in snippet:
+            return snippet["text"]
+        
+        # Try to get snippet from contextRegion
+        context_region = location.get("contextRegion", {})
+        if context_region:
+            context_snippet = context_region.get("snippet", {})
+            if context_snippet and "text" in context_snippet:
+                return context_snippet["text"]
+        
+        return ""
+    
+    def match_findings(self, semgrep_findings: List[Dict], bandit_findings: List[Dict]) -> Dict:
+        """Match findings by location and categorize them."""
+        
+        # Create location maps for efficient matching
+        semgrep_locations = {f["location_key"]: f for f in semgrep_findings}
+        bandit_locations = {f["location_key"]: f for f in bandit_findings}
+        
+        # Find matches
+        both_locations = set(semgrep_locations.keys()) & set(bandit_locations.keys())
+        semgrep_only = set(semgrep_locations.keys()) - set(bandit_locations.keys())
+        bandit_only = set(bandit_locations.keys()) - set(semgrep_locations.keys())
+        
+        categorized = {
+            "both": [],
+            "semgrep": [],
+            "bandit": []
+        }
+        
+        # Add matched findings (both tools found issues at same location)
+        for location_key in both_locations:
+            semgrep_finding = semgrep_locations[location_key]
+            bandit_finding = bandit_locations[location_key]
+            
+            merged_finding = {
+                "category": "both",
+                "location_key": location_key,
+                "file_path": semgrep_finding["file_path"],
+                "start_line": semgrep_finding["start_line"],
+                "end_line": semgrep_finding["end_line"],
+                "snippet": semgrep_finding["snippet"] or bandit_finding["snippet"],
+                "semgrep": {
+                    "rule_id": semgrep_finding["rule_id"],
+                    "rule_description": semgrep_finding["rule_description"],
+                    "message": semgrep_finding["message"],
+                    "severity": semgrep_finding["severity"],
+                    "snippet": semgrep_finding["snippet"]
+                },
+                "bandit": {
+                    "rule_id": bandit_finding["rule_id"],
+                    "rule_description": bandit_finding["rule_description"],
+                    "message": bandit_finding["message"],
+                    "severity": bandit_finding["severity"],
+                    "snippet": bandit_finding["snippet"]
+                }
+            }
+            categorized["both"].append(merged_finding)
+        
+        # Add semgrep-only findings
+        for location_key in semgrep_only:
+            finding = semgrep_locations[location_key]
+            categorized["semgrep"].append({
+                "category": "semgrep",
+                "location_key": location_key,
+                "file_path": finding["file_path"],
+                "start_line": finding["start_line"],
+                "end_line": finding["end_line"],
+                "rule_id": finding["rule_id"],
+                "rule_description": finding["rule_description"],
+                "message": finding["message"],
+                "severity": finding["severity"],
+                "snippet": finding["snippet"]
+            })
+        
+        # Add bandit-only findings
+        for location_key in bandit_only:
+            finding = bandit_locations[location_key]
+            categorized["bandit"].append({
+                "category": "bandit",
+                "location_key": location_key,
+                "file_path": finding["file_path"],
+                "start_line": finding["start_line"],
+                "end_line": finding["end_line"],
+                "rule_id": finding["rule_id"],
+                "rule_description": finding["rule_description"],
+                "message": finding["message"],
+                "severity": finding["severity"],
+                "snippet": finding["snippet"]
+            })
+        
+        return categorized
+    
+    def generate_summary(self, categorized: Dict) -> Dict:
+        """Generate summary statistics."""
+        return {
+            "total_findings": sum(len(findings) for findings in categorized.values()),
+            "both_tools": len(categorized["both"]),
+            "semgrep_only": len(categorized["semgrep"]),
+            "bandit_only": len(categorized["bandit"]),
+            "coverage": {
+                "both_percentage": len(categorized["both"]) / max(1, sum(len(findings) for findings in categorized.values())) * 100,
+                "agreement_rate": len(categorized["both"]) / max(1, len(categorized["both"]) + len(categorized["semgrep"]) + len(categorized["bandit"])) * 100
+            }
+        }
+    
+    def merge_reports(self, output_file: str = "merged_sast_report.json") -> Dict:
+        """Main method to merge SARIF reports."""
+        
+        # Load SARIF files
+        print(f"Loading semgrep report: {self.semgrep_path}")
+        semgrep_data = self.load_sarif(self.semgrep_path)
+        
+        print(f"Loading bandit report: {self.bandit_path}")
+        bandit_data = self.load_sarif(self.bandit_path)
+        
+        # Extract findings
+        print("Extracting findings...")
+        semgrep_findings = self.extract_findings(semgrep_data, "semgrep")
+        bandit_findings = self.extract_findings(bandit_data, "bandit")
+        
+        print(f"Found {len(semgrep_findings)} semgrep findings")
+        print(f"Found {len(bandit_findings)} bandit findings")
+        
+        # Match and categorize findings
+        print("Matching findings by location...")
+        categorized = self.match_findings(semgrep_findings, bandit_findings)
+        
+        # Generate summary
+        summary = self.generate_summary(categorized)
+        
+        # Create final report
+        merged_report = {
+            "metadata": {
+                "semgrep_file": str(self.semgrep_path),
+                "bandit_file": str(self.bandit_path),
+                "generated_at": "2025-08-24T00:00:00Z"  # You could use datetime.now().isoformat()
+            },
+            "summary": summary,
+            "findings": categorized
+        }
+        
+        # Save report
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(merged_report, f, indent=2, ensure_ascii=False)
+        
+        print(f"\nMerged report saved to: {output_file}")
+        print(f"Summary:")
+        print(f"  Total findings: {summary['total_findings']}")
+        print(f"  Found by both tools: {summary['both_tools']}")
+        print(f"  Semgrep only: {summary['semgrep_only']}")
+        print(f"  Bandit only: {summary['bandit_only']}")
+        print(f"  Agreement rate: {summary['coverage']['agreement_rate']:.1f}%")
+        
+        return merged_report
+
+
+def merge_sast_reports(
+    semgrep_file: str = "sast_results_v3.sarif",
+    bandit_file: str = "bandit_results_v3.sarif",
+    output_file: str = "merged_report_v11.json",
+    mappings_file: str = None
+) -> Dict:
+    """
+    Merge semgrep and bandit SARIF reports.
+    
+    Args:
+        semgrep_file: Path to semgrep SARIF file
+        bandit_file: Path to bandit SARIF file
+        output_file: Output file path for merged report
+        mappings_file: Path to rule mappings JSON (optional)
+        
+    Returns:
+        Merged report dictionary
+    """
+    merger = SARIFReportMerger(semgrep_file, bandit_file, mappings_file)
+    return merger.merge_reports(output_file)
+
+
+def main():
+    """Example usage with Python parameters."""
+    try:
+        # Merge SAST reports
+        dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_5/"
+        result = merge_sast_reports(
+            semgrep_file=f"{dir_path}/semgrep_report.sarif",
+            bandit_file=f"{dir_path}/bandit_report.sarif",
+            output_file=f"{dir_path}/merged_report.json",
+            mappings_file=None  # Uses default rule_mappings.json
+        )
+        
+        print(f"\n✅ Report merging completed successfully!")
+        print(f"📊 Total findings: {result['summary']['total_findings']}")
+        
+        return result
+        
+    except Exception as e:
+        print(f"\n❌ Report merging failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return {}
+
+
+if __name__ == "__main__":
+    main()

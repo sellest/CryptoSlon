@@ -50,7 +50,7 @@ def test_embeddings():
 
 if __name__ == "__main__":
     # Прямое обращение к модели
-    gc = get_llm_client("gigachat")
+    gc = get_llm_client("gpt-5-nano")
     messages = "Привет, представься"
     print(gc.chat_one(messages))
 

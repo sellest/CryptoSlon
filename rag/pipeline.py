@@ -334,7 +334,7 @@ if __name__ == "__main__":
     rag = RAGPipeline(
         llm_provider="GigaChat-max",
         query_template="queryprep_tests",
-        vector_db_collection="cybersecurity_pdfs",
+        vector_db_collection="task-5",
         enable_debug=True,
         min_relevance_score=0.5
     )
@@ -343,39 +343,39 @@ if __name__ == "__main__":
     health = rag.health_check()
     print(f"Pipeline health: {health}")
     
-    # # Test query
-    # test_query = "Осґар Рустэмович KPI презы"
-    #
-    # result = rag.run(test_query)
-    #
-    # print(f"\nВопрос: {test_query}")
-    # print(f"Ответ: {result.answer}")
-    # print(f"Источники: {len(result.sources)}")
-    # print(f"Время обработки: {result.processing_time:.2f}s")
-    #
-    # if result.debug_info:
-    #     print(f"\nОтладочная информация:")
-    #     for key, value in result.debug_info.items():
-    #         print(f"  {key}: {value}")
+    # Test query
+    test_query = "какой тип сертификатов электронной подписи должен быть у юрлиц?"
 
-    # Тестирование RAG-системы с запросами разного уровня
-    queries = [
-        {"q": "чей девиз «доверяй, но проверяй трижды»?", "a": "Найти факт с точной цитатой (Татьяна)."},
-        {"q": "кто превращает хаос в проект с дедлайнами за вечер", "a": "Мария Александровна"},
-        {"q": "персона, которая: любит UML, спорит об архитектуре и говорит «зависит от архитектуры»", "a": "Артур Евгеньевич"},
-        {"q": "дай факты о том, кто не называет Agile методологией", "a": "Олег Андреевич («Agile — стиль танца»)"},
-        {"q": "Who keeps a cactus as a “weekly talisman” and posts photos on Fridays?", "a": "Татьяна Олеговна"},
-        {"q": "покажи табличные факты про Мария Александровна (Excel/тайминг)", "a": "Достать строку из табличного блока"},
-        {"q": "суммаризируй все упоминания об Excel и назови всех людей, к кому это относится", "a": "Олег, Мария"},
-        {"q": "верни по каждому человеку ровно один “самый уникальный” факт и объясни, почему он уникален", "a": "Дедупликация и ранжирование"},
-        {"q": "сделай таблицу: Имя | 1 факт из “попугаев” | 1 факт из “удавов” | 1 факт из “таблицы”", "a": "Слияние разных источников"},
-    ]
+    result = rag.run(test_query)
 
-    for q in queries:
-        result = rag.run(q['q'])
+    print(f"\nВопрос: {test_query}")
+    print(f"Ответ: {result.answer}")
+    print(f"Источники: {len(result.sources)}")
+    print(f"Время обработки: {result.processing_time:.2f}s")
 
-        print(f"\nВопрос: {q['q']}")
-        print(f"Ответ: {result.answer}")
-        print(f"Ожидаемый ответ: {q['a']}")
-        print(f"Источники: {len(result.sources)}")
-        print(f"Время обработки: {result.processing_time:.2f}s")
+    if result.debug_info:
+        print(f"\nОтладочная информация:")
+        for key, value in result.debug_info.items():
+            print(f"  {key}: {value}")
+
+    # # Тестирование RAG-системы с запросами разного уровня
+    # queries = [
+    #     {"q": "чей девиз «доверяй, но проверяй трижды»?", "a": "Найти факт с точной цитатой (Татьяна)."},
+    #     {"q": "кто превращает хаос в проект с дедлайнами за вечер", "a": "Мария Александровна"},
+    #     {"q": "персона, которая: любит UML, спорит об архитектуре и говорит «зависит от архитектуры»", "a": "Артур Евгеньевич"},
+    #     {"q": "дай факты о том, кто не называет Agile методологией", "a": "Олег Андреевич («Agile — стиль танца»)"},
+    #     {"q": "Who keeps a cactus as a “weekly talisman” and posts photos on Fridays?", "a": "Татьяна Олеговна"},
+    #     {"q": "покажи табличные факты про Мария Александровна (Excel/тайминг)", "a": "Достать строку из табличного блока"},
+    #     {"q": "суммаризируй все упоминания об Excel и назови всех людей, к кому это относится", "a": "Олег, Мария"},
+    #     {"q": "верни по каждому человеку ровно один “самый уникальный” факт и объясни, почему он уникален", "a": "Дедупликация и ранжирование"},
+    #     {"q": "сделай таблицу: Имя | 1 факт из “попугаев” | 1 факт из “удавов” | 1 факт из “таблицы”", "a": "Слияние разных источников"},
+    # ]
+    #
+    # for q in queries:
+    #     result = rag.run(q['q'])
+    #
+    #     print(f"\nВопрос: {q['q']}")
+    #     print(f"Ответ: {result.answer}")
+    #     print(f"Ожидаемый ответ: {q['a']}")
+    #     print(f"Источники: {len(result.sources)}")
+    #     print(f"Время обработки: {result.processing_time:.2f}s")

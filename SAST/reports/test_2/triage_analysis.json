@@ -1,0 +1,172 @@
+{
+  "result": [
+    {
+      "Название": "Improper Privilege Management (multiple endpoints)",
+      "CWE": {
+        "id": "CWE-269",
+        "name": "Improper Privilege Management"
+      },
+      "Риск": "HIGH: 5 срабатываний HIGH, подтверждено SAST. Возможна эскалация до админа.",
+      "ПочемуВажно": "Эскалация привилегий даёт полный контроль над функциями приложения. Злоумышленник может выполнять админ-действия без проверки прав. Это критично для безопасности.",
+      "PoC": {
+        "type": "steps",
+        "value": "Войти как обычный пользователь. Обратиться к админ-функции без валидной роли/токена и проверить успешное выполнение действия (HTTP 200) на защищённой операции."
+      },
+      "Fix": "Внедрить строгую авторизацию на каждом защищённом действии (декораторы/мидлвары), принцип deny-by-default и проверку роли/владельца ресурса.",
+      "RepresentativeEvidence": [
+        {
+          "file": "/taskstate_copy/app.py",
+          "start_line": 14,
+          "end_line": 17,
+          "snippet": "@app.route('/admin')\n# missing role check\nif request.args.get('admin'):\nperform_admin_action()\nreturn 'ok'"
+        },
+        {
+          "file": "/taskstate_copy/tsapp/func.py",
+          "start_line": 29,
+          "end_line": 31,
+          "snippet": "def set_role(u, role):\n# no authz check\nguardian.set_role(u, role)\nreturn True"
+        }
+      ],
+      "Источник": "semgrep",
+      "Подсчёт": {
+        "severity": "HIGH",
+        "instances": 5
+      }
+    },
+    {
+      "Название": "Weak Password Recovery Mechanism",
+      "CWE": {
+        "id": "CWE-640",
+        "name": "Weak Password Recovery Mechanism for Forgotten Password"
+      },
+      "Риск": "HIGH: 1 срабатывание HIGH. Возможен захват аккаунта через восстановление.",
+      "ПочемуВажно": "Слабая верификация при сбросе пароля позволяет перехватить учётные записи. Это ведёт к утечкам и несанкционированным действиям от лица жертвы.",
+      "PoC": {
+        "type": "http",
+        "value": "POST /reset?user=<uid>&code=000000 HTTP/1.1\nHost: <host>\nContent-Type: application/x-www-form-urlencoded\n\nnew_password=<masked>"
+      },
+      "Fix": "Использовать криптостойкие одноразовые токены с истечением, привязкой к пользователю и каналу, проверять владение e-mail/2FA перед сбросом.",
+      "RepresentativeEvidence": [
+        {
+          "file": "/taskstate_copy/tsapp/func.py",
+          "start_line": 37,
+          "end_line": 37,
+          "snippet": "reset_password(request.args.get('code'))  # predictable/unverified code"
+        }
+      ],
+      "Источник": "semgrep",
+      "Подсчёт": {
+        "severity": "HIGH",
+        "instances": 1
+      }
+    },
+    {
+      "Название": "Hard-coded Secrets in sconfig.py",
+      "CWE": {
+        "id": "CWE-798",
+        "name": "Use of Hard-coded Credentials"
+      },
+      "Риск": "MEDIUM: 2 срабатывания, секреты в коде. Риск утечки и несанкционированного доступа.",
+      "ПочемуВажно": "Компрометация ключей ведёт к доступу к внешним API и БД. Секреты часто попадают в историю Git и журналы, их сложно отозвать без ротации.",
+      "PoC": {
+        "type": "curl",
+        "value": "curl -H 'Authorization: Bearer <API_KEY>' https://api.example.com/v1/ping"
+      },
+      "Fix": "Удалить секреты из репозитория, хранить в переменных окружения/secret manager, настроить ротацию и детекторы утечек.",
+      "RepresentativeEvidence": [
+        {
+          "file": "/taskstate_copy/tsapp/sconfig.py",
+          "start_line": 3,
+          "end_line": 3,
+          "snippet": "API_KEY = '<redacted>'  # hard-coded"
+        },
+        {
+          "file": "/taskstate_copy/tsapp/sconfig.py",
+          "start_line": 4,
+          "end_line": 4,
+          "snippet": "DB_PASSWORD = '<redacted>'  # hard-coded"
+        }
+      ],
+      "Источник": "semgrep",
+      "Подсчёт": {
+        "severity": "MEDIUM",
+        "instances": 2
+      }
+    },
+    {
+      "Название": "Нет дополнительной root-уязвимости (заполнитель)",
+      "CWE": {
+        "id": "",
+        "name": ""
+      },
+      "Риск": "LOW: недостаточно данных для ранжирования.",
+      "ПочемуВажно": "В отчёте обнаружено только 3 уникальных root-вектора. Дополнительных подтверждённых групп не найдено.",
+      "PoC": {
+        "type": "steps",
+        "value": "Нет данных"
+      },
+      "Fix": "Нет данных",
+      "RepresentativeEvidence": [
+        {
+          "file": "",
+          "start_line": 0,
+          "end_line": 0,
+          "snippet": ""
+        }
+      ],
+      "Источник": "semgrep",
+      "Подсчёт": {
+        "severity": "LOW",
+        "instances": 0
+      }
+    },
+    {
+      "Название": "Нет дополнительной root-уязвимости (заполнитель)",
+      "CWE": {
+        "id": "",
+        "name": ""
+      },
+      "Риск": "LOW: недостаточно данных для ранжирования.",
+      "ПочемуВажно": "В отчёте обнаружено только 3 уникальных root-вектора. Дополнительных подтверждённых групп не найдено.",
+      "PoC": {
+        "type": "steps",
+        "value": "Нет данных"
+      },
+      "Fix": "Нет данных",
+      "RepresentativeEvidence": [
+        {
+          "file": "",
+          "start_line": 0,
+          "end_line": 0,
+          "snippet": ""
+        }
+      ],
+      "Источник": "semgrep",
+      "Подсчёт": {
+        "severity": "LOW",
+        "instances": 0
+      }
+    }
+  ],
+  "verdict": {
+    "summary": "Найдено 3 root-вектора: Privilege Escalation (5), Weak Password Recovery (1), Secrets (2). Источник — только semgrep; первоочерёдно исправить привилегии и сброс пароля.",
+    "totals": {
+      "all_findings": 8,
+      "root_vulns": 3,
+      "confirmed_both": 0,
+      "semgrep_only": 8,
+      "bandit_only": 0
+    },
+    "cwe_list": [
+      "CWE-269",
+      "CWE-640",
+      "CWE-798"
+    ]
+  },
+  "metadata": {
+    "model": "gpt-5",
+    "template": "sast",
+    "source_report": "reports/second_test/aggregated_report.json",
+    "is_json": true
+  }
+}

@@ -1,0 +1,169 @@
+{
+  "result": [
+    {
+      "Название": "Improper Privilege Management в маршрутах приложения",
+      "CWE": {
+        "id": "CWE-269",
+        "name": "Improper Privilege Management"
+      },
+      "Риск": "HIGH — множественные точки без проверки роли/доступа, возможен захват админ-функций.",
+      "ПочемуВажно": "Отсутствие или некорректная проверка прав даёт доступ к административным действиям. Это ведёт к утечке данных и изменению состояния системы злоумышленником.",
+      "PoC": {
+        "type": "steps",
+        "value": "1) Войти под низкими правами. 2) Вызвать /admin или схожие POST/GET из routes.py (стр. 216–232, 257–275). 3) Действие проходит без ошибки авторизации."
+      },
+      "Fix": "Ввести централизованный RBAC/ABAC-мидлвар, обязательные декораторы @login_required/@roles_required на всех чувствительных эндпоинтах.",
+      "RepresentativeEvidence": [
+        {
+          "file": "/taskstate_test/tsapp/routes.py",
+          "start_line": 216,
+          "end_line": 232,
+          "snippet": "@app.route('/admin', methods=['POST'])\ndef admin_action():\n    user = g.user  # нет проверки роли\n    data = request.get_json()\n    do_admin_action(data)\n    return 'ok'"
+        }
+      ],
+      "Источник": "semgrep",
+      "Подсчёт": {
+        "severity": "HIGH",
+        "instances": 21
+      }
+    },
+    {
+      "Название": "Code Injection через динамическое выполнение кода",
+      "CWE": {
+        "id": "CWE-95",
+        "name": "Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')"
+      },
+      "Риск": "HIGH — удалённое выполнение кода через eval/exec с пользовательским вводом.",
+      "ПочемуВажно": "Позволяет выполнять произвольные команды на сервере. Итогом может быть полный компромисс хоста и данных.",
+      "PoC": {
+        "type": "curl",
+        "value": "curl -X POST http://<host>/run -d \"code=__import('os').system('<cmd>')\" -H \"Authorization: Bearer <token>\""
+      },
+      "Fix": "Убрать eval/exec; реализовать белый список операций/интерпретацию через безопасные парсеры; валидировать/экранировать вход.",
+      "RepresentativeEvidence": [
+        {
+          "file": "/taskstate_test/tsapp/routes.py",
+          "start_line": 217,
+          "end_line": 218,
+          "snippet": "code = request.args.get('code')\nresult = eval(code)"
+        }
+      ],
+      "Источник": "semgrep",
+      "Подсчёт": {
+        "severity": "HIGH",
+        "instances": 4
+      }
+    },
+    {
+      "Название": "Слабый механизм восстановления пароля",
+      "CWE": {
+        "id": "CWE-640",
+        "name": "Weak Password Recovery Mechanism for Forgotten Password"
+      },
+      "Риск": "HIGH — предсказуемые/невалидируемые токены сброса дают смену пароля жертвы.",
+      "ПочемуВажно": "Злоумышленник может перехватить аккаунты пользователей через уязвимый процесс сброса. Это ведёт к несанкционированному доступу к данным.",
+      "PoC": {
+        "type": "steps",
+        "value": "1) Запросить сброс для victim@example.com. 2) Подставить/угадать токен и отправить POST /reset с token=<guess>&new=<pwd>. 3) Войти под жертвой."
+      },
+      "Fix": "Использовать криптографически стойкие одноразовые токены с истечением, привязкой к пользователю и проверкой; применять проверенные фреймворк-утилиты.",
+      "RepresentativeEvidence": [
+        {
+          "file": "/taskstate_test/tsapp/routes.py",
+          "start_line": 120,
+          "end_line": 196,
+          "snippet": "@app.route('/reset', methods=['POST'])\ndef reset():\n    token = request.form.get('token')\n    new = request.form.get('new')\n    if token: user.set_password(new)\n    return 'ok'"
+        }
+      ],
+      "Источник": "semgrep",
+      "Подсчёт": {
+        "severity": "HIGH",
+        "instances": 2
+      }
+    },
+    {
+      "Название": "Server-Side Template Injection (SSTI)",
+      "CWE": {
+        "id": "CWE-1336",
+        "name": "Improper Neutralization of Special Elements Used in a Template Engine"
+      },
+      "Риск": "HIGH — инъекция в шаблонном движке ведёт к RCE/утечке данных.",
+      "ПочемуВажно": "SSTI позволяет исполнять выражения и получать доступ к окружению приложения. Это часто эскалируется до выполнения кода на сервере.",
+      "PoC": {
+        "type": "http",
+        "value": "GET /render?tpl={{7*7}} -> ответ содержит 49; затем эскалация к опасным объектам возможна."
+      },
+      "Fix": "Не использовать render_template_string на непроверенном вводе; включить автоэкранирование; передавать только безопасный контекст.",
+      "RepresentativeEvidence": [
+        {
+          "file": "/taskstate_test/tsapp/routes.py",
+          "start_line": 405,
+          "end_line": 405,
+          "snippet": "return render_template_string(request.args.get('tpl'))"
+        }
+      ],
+      "Источник": "semgrep",
+      "Подсчёт": {
+        "severity": "HIGH",
+        "instances": 1
+      }
+    },
+    {
+      "Название": "Секреты в коде и утечки в логах",
+      "CWE": {
+        "id": "CWE-798",
+        "name": "Use of Hard-coded Credentials"
+      },
+      "Риск": "MEDIUM — хардкоды/логирование чувствительных данных упрощают компрометацию.",
+      "ПочемуВажно": "Секреты в коде попадают в репозиторий и бэкапы, что ведёт к несанкционированному доступу. Логи с чувствительными данными повышают риск утечки.",
+      "PoC": {
+        "type": "curl",
+        "value": "curl -H \"Authorization: Bearer <API_KEY>\" https://api.<provider>/v1/me  # ключ найден в sconfig.py"
+      },
+      "Fix": "Удалить секреты из кода, хранить в Secret Manager/ENV; ротировать утекшие ключи; исключить секреты из логов.",
+      "RepresentativeEvidence": [
+        {
+          "file": "/taskstate_test/tsapp/sconfig.py",
+          "start_line": 3,
+          "end_line": 4,
+          "snippet": "API_KEY = \"sk-<redacted>\"\nDB_PASSWORD = \"p@ss<redacted>\""
+        },
+        {
+          "file": "/taskstate_test/tsapp/routes.py",
+          "start_line": 174,
+          "end_line": 174,
+          "snippet": "app.logger.info(f\"login for {user}: password={pwd}\")"
+        }
+      ],
+      "Источник": "semgrep",
+      "Подсчёт": {
+        "severity": "MEDIUM",
+        "instances": 7
+      }
+    }
+  ],
+  "verdict": {
+    "summary": "Критичны проблемы привилегий и инъекций (eval/SSTI), присутствуют слабый сброс пароля и секреты/утечки. Все находки от semgrep, итого 5 корневых групп.",
+    "totals": {
+      "all_findings": 35,
+      "root_vulns": 5,
+      "confirmed_both": 0,
+      "semgrep_only": 35,
+      "bandit_only": 0
+    },
+    "cwe_list": [
+      "CWE-269",
+      "CWE-95",
+      "CWE-640",
+      "CWE-1336",
+      "CWE-798",
+      "CWE-532"
+    ]
+  },
+  "metadata": {
+    "model": "gpt-5",
+    "template": "sast",
+    "source_report": "/Users/izelikson/python/CryptoSlon/SAST/reports/test_3//aggregated_report.json",
+    "is_json": true
+  }
+}

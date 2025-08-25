@@ -1,0 +1,170 @@
+{
+  "rule_to_cwe": {
+    "semgrep_rules": {
+      "SAST.rules.flask-ssti-render-template-string-taint": "CWE-1336",
+      "rules.flask-ssti-render-template-string-taint": "CWE-1336",
+      "SAST.rules.python-eval-exec-taint": "CWE-95",
+      "rules.python-eval-exec-taint": "CWE-95",
+      "SAST.rules.logging-passwords": "CWE-532",
+      "rules.logging-passwords": "CWE-532",
+      "SAST.rules.flask-hardcoded-secrets": "CWE-798",
+      "rules.flask-hardcoded-secrets": "CWE-798",
+      "SAST.rules.flask-privilege-role-from-cookie": "CWE-269",
+      "rules.flask-privilege-role-from-cookie": "CWE-269",
+      "SAST.rules.flask-privilege-magic-role-check": "CWE-269",
+      "rules.flask-privilege-magic-role-check": "CWE-269",
+      "SAST.rules.flask-passrec-password-in-get": "CWE-640",
+      "rules.flask-passrec-password-in-get": "CWE-640",
+      "SAST.rules.flask-passrec-get-route-password-change": "CWE-640",
+      "rules.flask-passrec-get-route-password-change": "CWE-640",
+      "SAST.rules.jwt-encode-without-exp-claim": "CWE-640",
+      "rules.jwt-encode-without-exp-claim": "CWE-640",
+      "SAST.rules.jinja-safe-filter-user-input": "CWE-79",
+      "rules.jinja-safe-filter-user-input": "CWE-79"
+    },
+    "bandit_rules": {
+      "B101": "CWE-703",
+      "B102": "CWE-95",
+      "B103": "CWE-732",
+      "B104": "CWE-200",
+      "B105": "CWE-259",
+      "B106": "CWE-259",
+      "B107": "CWE-78",
+      "B108": "CWE-22",
+      "B110": "CWE-703",
+      "B112": "CWE-703",
+      "B201": "CWE-22",
+      "B301": "CWE-502",
+      "B302": "CWE-327",
+      "B303": "CWE-327",
+      "B304": "CWE-327",
+      "B305": "CWE-327",
+      "B306": "CWE-327",
+      "B307": "CWE-95",
+      "B308": "CWE-79",
+      "B309": "CWE-295",
+      "B310": "CWE-22",
+      "B311": "CWE-330",
+      "B312": "CWE-295",
+      "B313": "CWE-611",
+      "B314": "CWE-611",
+      "B315": "CWE-611",
+      "B316": "CWE-611",
+      "B317": "CWE-611",
+      "B318": "CWE-611",
+      "B319": "CWE-611",
+      "B320": "CWE-611",
+      "B321": "CWE-319",
+      "B322": "CWE-20",
+      "B323": "CWE-295",
+      "B324": "CWE-327",
+      "B325": "CWE-22",
+      "B401": "CWE-78",
+      "B402": "CWE-78",
+      "B403": "CWE-78",
+      "B404": "CWE-78",
+      "B405": "CWE-78",
+      "B406": "CWE-78",
+      "B407": "CWE-78",
+      "B408": "CWE-78",
+      "B409": "CWE-78",
+      "B410": "CWE-78",
+      "B411": "CWE-78",
+      "B412": "CWE-78",
+      "B501": "CWE-295",
+      "B502": "CWE-295",
+      "B503": "CWE-295",
+      "B504": "CWE-295",
+      "B505": "CWE-295",
+      "B506": "CWE-295",
+      "B507": "CWE-295",
+      "B601": "CWE-78",
+      "B602": "CWE-78",
+      "B603": "CWE-78",
+      "B604": "CWE-78",
+      "B605": "CWE-78",
+      "B606": "CWE-78",
+      "B607": "CWE-78",
+      "B608": "CWE-89",
+      "B609": "CWE-20",
+      "B610": "CWE-489",
+      "B611": "CWE-489",
+      "B701": "CWE-489",
+      "B702": "CWE-489",
+      "B703": "CWE-489"
+    }
+  },
+  "cwe_descriptions": {
+    "CWE-20": "Improper Input Validation",
+    "CWE-22": "Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')",
+    "CWE-78": "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
+    "CWE-79": "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')",
+    "CWE-89": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+    "CWE-95": "Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')",
+    "CWE-200": "Exposure of Sensitive Information to an Unauthorized Actor",
+    "CWE-259": "Use of Hard-coded Password",
+    "CWE-269": "Improper Privilege Management",
+    "CWE-295": "Improper Certificate Validation",
+    "CWE-319": "Cleartext Transmission of Sensitive Information",
+    "CWE-327": "Use of a Broken or Risky Cryptographic Algorithm",
+    "CWE-330": "Use of Insufficiently Random Values",
+    "CWE-489": "Active Debug Code",
+    "CWE-502": "Deserialization of Untrusted Data",
+    "CWE-532": "Insertion of Sensitive Information into Log File",
+    "CWE-611": "Improper Restriction of XML External Entity Reference",
+    "CWE-640": "Weak Password Recovery Mechanism for Forgotten Password",
+    "CWE-703": "Improper Check or Handling of Exceptional Conditions",
+    "CWE-732": "Incorrect Permission Assignment for Critical Resource",
+    "CWE-798": "Use of Hard-coded Credentials",
+    "CWE-1336": "Improper Neutralization of Special Elements Used in a Template Engine"
+  },
+  "cwe_severity_mapping": {
+    "HIGH": [
+      "CWE-78", "CWE-89", "CWE-95", "CWE-269", "CWE-502", "CWE-611", "CWE-640", "CWE-1336"
+    ],
+    "MEDIUM": [
+      "CWE-20", "CWE-22", "CWE-79", "CWE-200", "CWE-259", "CWE-295", "CWE-319", "CWE-327", "CWE-330", "CWE-532", "CWE-732", "CWE-798"
+    ],
+    "LOW": [
+      "CWE-489", "CWE-703"
+    ]
+  },
+  "semantic_groupings": {
+    "SECRETS": {
+      "display_name": "Hard-coded Secrets/Credentials",
+      "cwes": ["CWE-259", "CWE-798"],
+      "severity": "MEDIUM",
+      "description": "Hard-coded passwords, API keys, or other sensitive credentials in source code"
+    },
+    "CODE_INJECTION": {
+      "display_name": "Code Injection Vulnerabilities", 
+      "cwes": ["CWE-95"],
+      "severity": "HIGH",
+      "description": "Execution of untrusted code through eval, exec, or similar functions"
+    },
+    "PRIVILEGE_ESCALATION": {
+      "display_name": "Privilege Management Issues",
+      "cwes": ["CWE-269"],
+      "severity": "HIGH", 
+      "description": "Improper privilege management and access control issues"
+    },
+    "SENSITIVE_DATA_EXPOSURE": {
+      "display_name": "Sensitive Data Exposure",
+      "cwes": ["CWE-532", "CWE-200"],
+      "severity": "MEDIUM",
+      "description": "Exposure of sensitive information through logs or unauthorized access"
+    },
+    "WEAK_AUTHENTICATION": {
+      "display_name": "Weak Authentication/Session Management",
+      "cwes": ["CWE-640"],
+      "severity": "HIGH",
+      "description": "Weak password recovery mechanisms and session management issues"
+    },
+    "TEMPLATE_INJECTION": {
+      "display_name": "Template Injection",
+      "cwes": ["CWE-1336"],
+      "severity": "HIGH",
+      "description": "Server-side template injection vulnerabilities"
+    }
+  }
+}

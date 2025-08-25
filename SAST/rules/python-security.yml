@@ -1,0 +1,176 @@
+rules:
+  #####################################################################
+  # CWE-1336 — SSTI через render_template_string c пользовательским вводом
+  #####################################################################
+  - id: flask-ssti-render-template-string-taint
+    message: >
+      Возможная SSTI (CWE-1336): пользовательский ввод попадает в render_template_string().
+      Проверьте, что строка не формируется из request.args/request.form/request.values/JSON.
+    severity: ERROR
+    languages: [python]
+    mode: taint
+    pattern-sources:
+      - pattern: request.args[$X]
+      - pattern: request.args.get($X)
+      - pattern: request.args.get($X, ...)
+      - pattern: request.form[$X]
+      - pattern: request.form.get($X)
+      - pattern: request.form.get($X, ...)
+      - pattern: request.values[$X]
+      - pattern: request.values.get($X)
+      - pattern: request.values.get($X, ...)
+      - pattern: request.get_json()[...]
+      - pattern: request.json[...]
+      - pattern: request.data
+    pattern-sinks:
+      - pattern: render_template_string($SINK)
+    pattern-sanitizers:
+      # добавьте явные санитайзеры при необходимости
+      - pattern: markupsafe.escape(...)
+      - pattern: html.escape(...)
+
+  #####################################################################
+  # CWE-269 — Ненадёжное управление привилегиями (роль читается из cookie)
+  #####################################################################
+  - id: flask-privilege-role-from-cookie
+    message: >
+      Возможная проблема управления привилегиями (CWE-269): роль/уровень доступа читается из клиентского cookie.
+      Не доверяйте request.cookies для ACL. Храните роль в серверной сессии/БД (current_user), а не в cookie.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $RID = request.cookies[$KEY]
+          - pattern: $RID = request.cookies.get($KEY, ...)
+    metavariable-regex:
+      KEY: "(?i)rid|role|role_id|userrole|priv|level|acl"
+
+  # Доп. подсветка сравнения «магических» значений роли (эвристика)
+  - id: flask-privilege-magic-role-check
+    message: >
+      Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что $RID не приходит из cookie,
+      и что проверка выполняется на серверной роли (current_user / серверная сессия).
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern: |
+          if $RID == $ADMIN:
+              ...
+    metavariable-regex:
+      ADMIN: "(?i)1|admin|administrator|root|super|superuser"
+    metadata:
+      likelihood: heuristic
+
+  #####################################################################
+  # CWE-640 — Слабый механизм восстановления пароля
+  #####################################################################
+
+  # 640a: Пароль из URL-параметров (GET)
+  - id: flask-passrec-password-in-get
+    message: >
+      CWE-640: Пароль берётся из URL (request.args). Пароли нельзя передавать через query string —
+      используйте POST/JSON тело и защищайте CSRF/TTL/одноразовость токенов.
+    severity: ERROR
+    languages: [python]
+    mode: taint
+    pattern-sources:
+      - pattern: request.args[$K]
+    pattern-sinks:
+      - pattern: generate_password_hash($ARG, ...)
+      - pattern: $USER.password = $ARG
+    metavariable-regex:
+      K: "(?i)pass|password|newpass|new_password|pwd"
+
+  # 640b: Смена пароля по GET-методу в роутере Flask (эвристика)
+  - id: flask-passrec-get-route-password-change
+    message: >
+      CWE-640 (эвристика): маршрут допускает метод GET и меняет пароль.
+      Смена пароля по GET небезопасна. Используйте POST и проверяйте токен/TTL/одноразовость.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern: |
+          @app.route($PATH, methods=[$METHS, ...])
+          def $F(...):
+              ...
+              $USER.password = ...
+              ...
+      - pattern-inside: |
+          @app.route($PATH, methods=[$METHS, ...])
+          def $F(...):
+              ...
+    metavariable-regex:
+      METHS: "(?i)['\"]GET['\"]"
+
+  # 640c: JWT без exp (эвристика на кодирование без поля exp)
+  - id: jwt-encode-without-exp-claim
+    message: >
+      CWE-640 (эвристика): jwt.encode() без поля exp в payload. Добавьте 'exp' и проверяйте истечение срока.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern: jwt.encode($PAYLOAD, $KEY, ...)
+    metadata:
+      note: >
+        Эвристика срабатывает над буквальными dict. Если payload собирается динамически, правило может не сработать.
+
+  #####################################################################
+  # Доп. серьёзные проблемы из вашего репо
+  #####################################################################
+
+  # Code Injection через eval/exec c пользовательским вводом
+  - id: python-eval-exec-taint
+    message: >
+      Возможная инъекция кода: eval/exec с пользовательским вводом.
+      Никогда не передавайте значения из request.* в eval/exec.
+    severity: ERROR
+    languages: [python]
+    mode: taint
+    pattern-sources:
+      - pattern: request.args[$X]
+      - pattern: request.form[$X]
+      - pattern: request.values[$X]
+      - pattern: request.get_json()[...]
+      - pattern: request.json[...]
+      - pattern: request.data
+    pattern-sinks:
+      - pattern: eval($SINK)
+      - pattern: exec($SINK)
+
+  # Логирование паролей / чувствительных данных
+  - id: logging-passwords
+    message: >
+      Утечка чувствительных данных через логи (CWE-532): строка логирования содержит 'password'.
+      Не логируйте пароли/секреты; маскируйте значения.
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern-regex: (?i)logger\.(debug|info|warning|error|exception)\(.*password.*\)
+      - pattern-regex: (?i)app\.logger\.(debug|info|warning|error|exception)\(.*password.*\)
+
+  # Захардкоженные секреты Flask/JWT (SECRET_KEY/JWT_KEY)
+  - id: flask-hardcoded-secrets
+    message: >
+      Захардкоженный секрет (CWE-798). Храните SECRET_KEY/JWT_KEY в переменных окружения или в секрет-хранилище.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: SECRET_KEY = $VAL
+          - pattern: JWT_KEY = $VAL
+    metavariable-pattern:
+      metavariable: VAL
+      pattern: "\"...\""
+
+  #####################################################################
+  # Доп. эвристика: потенциальная SSTI через фильтр |safe в шаблонах Jinja2
+  # (сработает только если шаблоны подгружаются как строки; для .html можно
+  #  подключить semgrep с поддержкой html/jinja, либо добавить отдельный набор правил)
+  #####################################################################
+  - id: jinja-safe-filter-user-input
+    message: >
+      Эвристика SSTI/XSS: вывод помечен как |safe. Убедитесь, что данные не из пользовательского ввода,
+      либо используйте экранирование.
+    severity: INFO
+    languages: [python]
+    pattern-regex: \|\s*safe

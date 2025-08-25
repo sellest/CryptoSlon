@@ -1,0 +1,119 @@
+{
+  "metadata": {
+    "semgrep_file": "/Users/izelikson/python/CryptoSlon/SAST/reports/second_test/semgrep_report.sarif",
+    "bandit_file": "/Users/izelikson/python/CryptoSlon/SAST/reports/second_test/bandit_report.sarif",
+    "generated_at": "2025-08-24T00:00:00Z"
+  },
+  "summary": {
+    "total_findings": 8,
+    "both_tools": 0,
+    "semgrep_only": 8,
+    "bandit_only": 0,
+    "coverage": {
+      "both_percentage": 0.0,
+      "agreement_rate": 0.0
+    }
+  },
+  "findings": {
+    "both": [],
+    "semgrep": [
+      {
+        "category": "semgrep",
+        "location_key": "/taskstate_copy/tsapp/func.py:26-28",
+        "file_path": "/taskstate_copy/tsapp/func.py",
+        "start_line": 26,
+        "end_line": 28,
+        "rule_id": "CWE-269",
+        "rule_description": "Improper Privilege Management",
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "severity": "HIGH",
+        "snippet": "    if rid == 1:\n        if task.private == False or (task.uid1 == uid and task.private == True):\n            res = True"
+      },
+      {
+        "category": "semgrep",
+        "location_key": "/taskstate_copy/tsapp/func.py:37-37",
+        "file_path": "/taskstate_copy/tsapp/func.py",
+        "start_line": 37,
+        "end_line": 37,
+        "rule_id": "CWE-640",
+        "rule_description": "Weak Password Recovery Mechanism for Forgotten Password",
+        "message": "CWE-640 (эвристика): jwt.encode() без поля exp в payload. Добавьте 'exp' и проверяйте истечение срока.\n",
+        "severity": "HIGH",
+        "snippet": "    token = jwt.encode(jwt_data, JWT_KEY, algorithm=\"HS256\")"
+      },
+      {
+        "category": "semgrep",
+        "location_key": "/taskstate_copy/app.py:14-17",
+        "file_path": "/taskstate_copy/app.py",
+        "start_line": 14,
+        "end_line": 17,
+        "rule_id": "CWE-269",
+        "rule_description": "Improper Privilege Management",
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что __name__ не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "severity": "HIGH",
+        "snippet": "if __name__ == '__main__':\n    with app.app_context():\n        db.create_all()\n        app.run()"
+      },
+      {
+        "category": "semgrep",
+        "location_key": "/taskstate_copy/tsapp/func.py:24-25",
+        "file_path": "/taskstate_copy/tsapp/func.py",
+        "start_line": 24,
+        "end_line": 25,
+        "rule_id": "CWE-269",
+        "rule_description": "Improper Privilege Management",
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "severity": "HIGH",
+        "snippet": "    if rid == 2:\n        res = True"
+      },
+      {
+        "category": "semgrep",
+        "location_key": "/taskstate_copy/tsapp/func.py:30-31",
+        "file_path": "/taskstate_copy/tsapp/func.py",
+        "start_line": 30,
+        "end_line": 31,
+        "rule_id": "CWE-269",
+        "rule_description": "Improper Privilege Management",
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что task.uid1 не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "severity": "HIGH",
+        "snippet": "        if task.uid1 == uid:\n            res = True"
+      },
+      {
+        "category": "semgrep",
+        "location_key": "/taskstate_copy/tsapp/sconfig.py:3-3",
+        "file_path": "/taskstate_copy/tsapp/sconfig.py",
+        "start_line": 3,
+        "end_line": 3,
+        "rule_id": "CWE-798",
+        "rule_description": "Use of Hard-coded Credentials",
+        "message": "Захардкоженный секрет (CWE-798). Храните SECRET_KEY/JWT_KEY в переменных окружения или в секрет-хранилище.\n",
+        "severity": "MEDIUM",
+        "snippet": "SECRET_KEY = 'CTF-2#SecretKey'"
+      },
+      {
+        "category": "semgrep",
+        "location_key": "/taskstate_copy/tsapp/sconfig.py:4-4",
+        "file_path": "/taskstate_copy/tsapp/sconfig.py",
+        "start_line": 4,
+        "end_line": 4,
+        "rule_id": "CWE-798",
+        "rule_description": "Use of Hard-coded Credentials",
+        "message": "Захардкоженный секрет (CWE-798). Храните SECRET_KEY/JWT_KEY в переменных окружения или в секрет-хранилище.\n",
+        "severity": "MEDIUM",
+        "snippet": "JWT_KEY = 'CTF-2#PirateLabel'"
+      },
+      {
+        "category": "semgrep",
+        "location_key": "/taskstate_copy/tsapp/func.py:29-31",
+        "file_path": "/taskstate_copy/tsapp/func.py",
+        "start_line": 29,
+        "end_line": 31,
+        "rule_id": "CWE-269",
+        "rule_description": "Improper Privilege Management",
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "severity": "HIGH",
+        "snippet": "    if rid == 0:\n        if task.uid1 == uid:\n            res = True"
+      }
+    ],
+    "bandit": []
+  }
+}

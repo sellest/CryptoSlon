@@ -1,0 +1,1022 @@
+{
+  "version": "1.132.0",
+  "results": [
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/app.py",
+      "start": {
+        "line": 14,
+        "col": 1,
+        "offset": 372
+      },
+      "end": {
+        "line": 17,
+        "col": 18,
+        "offset": 468
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что __name__ не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/func.py",
+      "start": {
+        "line": 24,
+        "col": 5,
+        "offset": 477
+      },
+      "end": {
+        "line": 25,
+        "col": 19,
+        "offset": 508
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/func.py",
+      "start": {
+        "line": 26,
+        "col": 5,
+        "offset": 513
+      },
+      "end": {
+        "line": 28,
+        "col": 23,
+        "offset": 629
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/func.py",
+      "start": {
+        "line": 29,
+        "col": 5,
+        "offset": 634
+      },
+      "end": {
+        "line": 31,
+        "col": 23,
+        "offset": 698
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/func.py",
+      "start": {
+        "line": 30,
+        "col": 9,
+        "offset": 655
+      },
+      "end": {
+        "line": 31,
+        "col": 23,
+        "offset": 698
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что task.uid1 не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.jwt-encode-without-exp-claim",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/func.py",
+      "start": {
+        "line": 37,
+        "col": 13,
+        "offset": 800
+      },
+      "end": {
+        "line": 37,
+        "col": 61,
+        "offset": 848
+      },
+      "extra": {
+        "message": "CWE-640 (эвристика): jwt.encode() без поля exp в payload. Добавьте 'exp' и проверяйте истечение срока.\n",
+        "metadata": {
+          "note": "Эвристика срабатывает над буквальными dict. Если payload собирается динамически, правило может не сработать.\n"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 65,
+        "col": 5,
+        "offset": 2054
+      },
+      "end": {
+        "line": 80,
+        "col": 45,
+        "offset": 2844
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что request.method не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.logging-passwords",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 77,
+        "col": 13,
+        "offset": 2655
+      },
+      "end": {
+        "line": 77,
+        "col": 101,
+        "offset": 2743
+      },
+      "extra": {
+        "message": "Утечка чувствительных данных через логи (CWE-532): строка логирования содержит 'password'. Не логируйте пароли/секреты; маскируйте значения.\n",
+        "metadata": {},
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.logging-passwords",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 77,
+        "col": 17,
+        "offset": 2659
+      },
+      "end": {
+        "line": 77,
+        "col": 101,
+        "offset": 2743
+      },
+      "extra": {
+        "message": "Утечка чувствительных данных через логи (CWE-532): строка логирования содержит 'password'. Не логируйте пароли/секреты; маскируйте значения.\n",
+        "metadata": {},
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 95,
+        "col": 5,
+        "offset": 3184
+      },
+      "end": {
+        "line": 117,
+        "col": 43,
+        "offset": 4358
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что request.method не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.logging-passwords",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 113,
+        "col": 13,
+        "offset": 4075
+      },
+      "end": {
+        "line": 113,
+        "col": 121,
+        "offset": 4183
+      },
+      "extra": {
+        "message": "Утечка чувствительных данных через логи (CWE-532): строка логирования содержит 'password'. Не логируйте пароли/секреты; маскируйте значения.\n",
+        "metadata": {},
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.logging-passwords",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 113,
+        "col": 17,
+        "offset": 4079
+      },
+      "end": {
+        "line": 113,
+        "col": 121,
+        "offset": 4183
+      },
+      "extra": {
+        "message": "Утечка чувствительных данных через логи (CWE-532): строка логирования содержит 'password'. Не логируйте пароли/секреты; маскируйте значения.\n",
+        "metadata": {},
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-passrec-get-route-password-change",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 120,
+        "col": 1,
+        "offset": 4361
+      },
+      "end": {
+        "line": 196,
+        "col": 61,
+        "offset": 8046
+      },
+      "extra": {
+        "message": "CWE-640 (эвристика): маршрут допускает метод GET и меняет пароль. Смена пароля по GET небезопасна. Используйте POST и проверяйте токен/TTL/одноразовость.\n",
+        "metadata": {},
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.logging-passwords",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 174,
+        "col": 17,
+        "offset": 6871
+      },
+      "end": {
+        "line": 174,
+        "col": 153,
+        "offset": 7007
+      },
+      "extra": {
+        "message": "Утечка чувствительных данных через логи (CWE-532): строка логирования содержит 'password'. Не логируйте пароли/секреты; маскируйте значения.\n",
+        "metadata": {},
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.logging-passwords",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 174,
+        "col": 21,
+        "offset": 6875
+      },
+      "end": {
+        "line": 174,
+        "col": 153,
+        "offset": 7007
+      },
+      "extra": {
+        "message": "Утечка чувствительных данных через логи (CWE-532): строка логирования содержит 'password'. Не логируйте пароли/секреты; маскируйте значения.\n",
+        "metadata": {},
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.logging-passwords",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 186,
+        "col": 25,
+        "offset": 7498
+      },
+      "end": {
+        "line": 186,
+        "col": 113,
+        "offset": 7586
+      },
+      "extra": {
+        "message": "Утечка чувствительных данных через логи (CWE-532): строка логирования содержит 'password'. Не логируйте пароли/секреты; маскируйте значения.\n",
+        "metadata": {},
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.logging-passwords",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 186,
+        "col": 29,
+        "offset": 7502
+      },
+      "end": {
+        "line": 186,
+        "col": 113,
+        "offset": 7586
+      },
+      "extra": {
+        "message": "Утечка чувствительных данных через логи (CWE-532): строка логирования содержит 'password'. Не логируйте пароли/секреты; маскируйте значения.\n",
+        "metadata": {},
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 201,
+        "col": 5,
+        "offset": 8105
+      },
+      "end": {
+        "line": 202,
+        "col": 34,
+        "offset": 8170
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что response.status_code не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 216,
+        "col": 5,
+        "offset": 8523
+      },
+      "end": {
+        "line": 232,
+        "col": 43,
+        "offset": 9569
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что request.method не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.python-eval-exec-taint",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 217,
+        "col": 95,
+        "offset": 8646
+      },
+      "end": {
+        "line": 217,
+        "col": 124,
+        "offset": 8675
+      },
+      "extra": {
+        "message": "Возможная инъекция кода: eval/exec с пользовательским вводом. Никогда не передавайте значения из request.* в eval/exec.\n",
+        "metadata": {},
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.python-eval-exec-taint",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 218,
+        "col": 136,
+        "offset": 8822
+      },
+      "end": {
+        "line": 218,
+        "col": 165,
+        "offset": 8851
+      },
+      "extra": {
+        "message": "Возможная инъекция кода: eval/exec с пользовательским вводом. Никогда не передавайте значения из request.* в eval/exec.\n",
+        "metadata": {},
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 257,
+        "col": 9,
+        "offset": 10590
+      },
+      "end": {
+        "line": 275,
+        "col": 81,
+        "offset": 11801
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что request.method не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.python-eval-exec-taint",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 258,
+        "col": 99,
+        "offset": 10717
+      },
+      "end": {
+        "line": 258,
+        "col": 128,
+        "offset": 10746
+      },
+      "extra": {
+        "message": "Возможная инъекция кода: eval/exec с пользовательским вводом. Никогда не передавайте значения из request.* в eval/exec.\n",
+        "metadata": {},
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.python-eval-exec-taint",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 262,
+        "col": 32,
+        "offset": 10955
+      },
+      "end": {
+        "line": 262,
+        "col": 61,
+        "offset": 10984
+      },
+      "extra": {
+        "message": "Возможная инъекция кода: eval/exec с пользовательским вводом. Никогда не передавайте значения из request.* в eval/exec.\n",
+        "metadata": {},
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 303,
+        "col": 5,
+        "offset": 13028
+      },
+      "end": {
+        "line": 304,
+        "col": 92,
+        "offset": 13132
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 305,
+        "col": 5,
+        "offset": 13137
+      },
+      "end": {
+        "line": 306,
+        "col": 188,
+        "offset": 13337
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 307,
+        "col": 5,
+        "offset": 13342
+      },
+      "end": {
+        "line": 308,
+        "col": 130,
+        "offset": 13484
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 398,
+        "col": 9,
+        "offset": 17734
+      },
+      "end": {
+        "line": 399,
+        "col": 110,
+        "offset": 17856
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 400,
+        "col": 9,
+        "offset": 17865
+      },
+      "end": {
+        "line": 401,
+        "col": 205,
+        "offset": 18082
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 402,
+        "col": 9,
+        "offset": 18091
+      },
+      "end": {
+        "line": 403,
+        "col": 147,
+        "offset": 18250
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 416,
+        "col": 5,
+        "offset": 18706
+      },
+      "end": {
+        "line": 429,
+        "col": 46,
+        "offset": 19764
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 423,
+        "col": 9,
+        "offset": 19266
+      },
+      "end": {
+        "line": 429,
+        "col": 46,
+        "offset": 19764
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что len(users) не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 436,
+        "col": 5,
+        "offset": 19871
+      },
+      "end": {
+        "line": 451,
+        "col": 35,
+        "offset": 20885
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 458,
+        "col": 5,
+        "offset": 20992
+      },
+      "end": {
+        "line": 473,
+        "col": 35,
+        "offset": 22006
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-privilege-magic-role-check",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 479,
+        "col": 5,
+        "offset": 22083
+      },
+      "end": {
+        "line": 501,
+        "col": 35,
+        "offset": 23361
+      },
+      "extra": {
+        "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что request.method не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+        "metadata": {
+          "likelihood": "heuristic"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.logging-passwords",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 497,
+        "col": 13,
+        "offset": 23075
+      },
+      "end": {
+        "line": 497,
+        "col": 124,
+        "offset": 23186
+      },
+      "extra": {
+        "message": "Утечка чувствительных данных через логи (CWE-532): строка логирования содержит 'password'. Не логируйте пароли/секреты; маскируйте значения.\n",
+        "metadata": {},
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.logging-passwords",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "start": {
+        "line": 497,
+        "col": 17,
+        "offset": 23079
+      },
+      "end": {
+        "line": 497,
+        "col": 124,
+        "offset": 23186
+      },
+      "extra": {
+        "message": "Утечка чувствительных данных через логи (CWE-532): строка логирования содержит 'password'. Не логируйте пароли/секреты; маскируйте значения.\n",
+        "metadata": {},
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-hardcoded-secrets",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/sconfig.py",
+      "start": {
+        "line": 3,
+        "col": 1,
+        "offset": 11
+      },
+      "end": {
+        "line": 3,
+        "col": 31,
+        "offset": 41
+      },
+      "extra": {
+        "message": "Захардкоженный секрет (CWE-798). Храните SECRET_KEY/JWT_KEY в переменных окружения или в секрет-хранилище.\n",
+        "metadata": {},
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "rules.flask-hardcoded-secrets",
+      "path": "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/sconfig.py",
+      "start": {
+        "line": 4,
+        "col": 1,
+        "offset": 42
+      },
+      "end": {
+        "line": 4,
+        "col": 30,
+        "offset": 71
+      },
+      "extra": {
+        "message": "Захардкоженный секрет (CWE-798). Храните SECRET_KEY/JWT_KEY в переменных окружения или в секрет-хранилище.\n",
+        "metadata": {},
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    }
+  ],
+  "errors": [],
+  "paths": {
+    "scanned": [
+      "/Users/izelikson/python/CryptoSlon/SAST/taskstate/app.py",
+      "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/__init__.py",
+      "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/config.py",
+      "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/func.py",
+      "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/models.py",
+      "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/routes.py",
+      "/Users/izelikson/python/CryptoSlon/SAST/taskstate/tsapp/sconfig.py"
+    ]
+  },
+  "time": {
+    "rules": [],
+    "rules_parse_time": 0.0038459300994873047,
+    "profiling_times": {
+      "config_time": 0.12569022178649902,
+      "core_time": 0.5065312385559082,
+      "ignores_time": 5.125999450683594e-05,
+      "total_time": 0.6325061321258545
+    },
+    "parsing_time": {
+      "total_time": 0.04322004318237305,
+      "per_file_time": {
+        "mean": 0.006174291883196149,
+        "std_dev": 7.2409390055809675e-06
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.0,
+        "count_ratio": 0.0
+      },
+      "very_slow_files": []
+    },
+    "scanning_time": {
+      "total_time": 0.08784317970275879,
+      "per_file_time": {
+        "mean": 0.012549025671822683,
+        "std_dev": 0.00016218811466545474
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.0,
+        "count_ratio": 0.0
+      },
+      "very_slow_files": []
+    },
+    "matching_time": {
+      "total_time": 0.021343231201171875,
+      "per_file_and_rule_time": {
+        "mean": 0.0013339519500732422,
+        "std_dev": 1.8772759418084206e-06
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.0,
+        "count_ratio": 0.0
+      },
+      "very_slow_rules_on_files": []
+    },
+    "tainting_time": {
+      "total_time": 0.015880346298217773,
+      "per_def_and_rule_time": {
+        "mean": 0.00019605365800268857,
+        "std_dev": 3.594831514135465e-08
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.0,
+        "count_ratio": 0.0
+      },
+      "very_slow_rules_on_defs": []
+    },
+    "fixpoint_timeouts": [],
+    "targets": [],
+    "total_bytes": 0,
+    "max_memory_bytes": 74653056
+  },
+  "engine_requested": "OSS",
+  "skipped_rules": []
+}

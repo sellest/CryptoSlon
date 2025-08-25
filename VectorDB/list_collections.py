@@ -12,7 +12,7 @@ def main():
     
     try:
         # Используем статический метод для получения всех коллекций
-        collections = BaseChromaDB.list_all_collections("./chroma_db")
+        collections = BaseChromaDB.list_all_collections("../chroma_db")
         
         if not collections:
             print("❌ Коллекции не найдены или база данных пуста")

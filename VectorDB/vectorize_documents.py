@@ -96,27 +96,27 @@ class SimpleVectorizer:
 
 # Example usage
 if __name__ == "__main__":
-    # Example 1: Create new collection for PDF documents
-    pdf_vectorizer = SimpleVectorizer(
-        collection_name="cybersecurity_pdfs",
-        chroma_db_path="../chroma_db"
-    )
-    
-    # Process PDF files
-    pdf_files = [
-        "/Users/izelikson/python/CryptoSlon/VectorDB/data/test_data.pdf",
-    ]
-    
-    print("Processing PDF documents...")
-    pdf_metrics = pdf_vectorizer.vectorize_files(pdf_files)
-    pdf_vectorizer.print_report(pdf_metrics)
-
-    # # Example 3: Process entire directory
-    # directory_vectorizer = SimpleVectorizer(
-    #     collection_name="documents_from_dir",
-    #     chroma_db_path="./custom_chroma_path"
+    # # Example 1: Create new collection for PDF documents
+    # pdf_vectorizer = SimpleVectorizer(
+    #     collection_name="cybersecurity_pdfs",
+    #     chroma_db_path="../chroma_db"
     # )
     #
-    # print("\nProcessing entire directory...")
-    # dir_metrics = directory_vectorizer.vectorize_directory("VectorDB/data/", recursive=True)
-    # directory_vectorizer.print_report(dir_metrics)
+    # # Process PDF files
+    # pdf_files = [
+    #     "/Users/izelikson/python/CryptoSlon/VectorDB/data/test_data.pdf",
+    # ]
+    #
+    # print("Processing PDF documents...")
+    # pdf_metrics = pdf_vectorizer.vectorize_files(pdf_files)
+    # pdf_vectorizer.print_report(pdf_metrics)
+
+    # Example 3: Process entire directory
+    directory_vectorizer = SimpleVectorizer(
+        collection_name="task-5",
+        chroma_db_path="../chroma_db"
+    )
+
+    print("\nProcessing entire directory...")
+    dir_metrics = directory_vectorizer.vectorize_directory("/Users/izelikson/python/CryptoSlon/VectorDB/data/task5/", recursive=True)
+    directory_vectorizer.print_report(dir_metrics)

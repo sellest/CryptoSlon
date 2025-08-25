@@ -16,8 +16,12 @@ SUPPORTED_MODELS = {
     "gpt-4-turbo": {"provider": "openai", "param_name": "model_name"},
     "gpt-4o": {"provider": "openai", "param_name": "model_name"},
     "gpt-4o-mini": {"provider": "openai", "param_name": "model_name"},
-    "gpt-3.5-turbo": {"provider": "openai", "param_name": "model_name"},
+    "gpt-5-mini": {"provider": "openai", "param_name": "model_name"},
+    "gpt-5": {"provider": "openai", "param_name": "model_name"},
+    "gpt-5-nano": {"provider": "openai", "param_name": "model_name"},
+    "o3": {"provider": "openai", "param_name": "model_name"},
 }
+
 
 # Default model
 DEFAULT_MODEL = "GigaChat"

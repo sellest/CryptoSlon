@@ -5,14 +5,19 @@ Categorizes findings as "both", "semgrep", or "bandit" based on location matchin
 """
 
 import json
+import logging
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Optional, Any
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 
 class SARIFReportMerger:
-    def __init__(self, semgrep_sarif_path: str, bandit_sarif_path: str, mappings_file: str = None):
+    def __init__(self, semgrep_sarif_path: str, bandit_sarif_path: str, mappings_file: Optional[str] = None):
         self.semgrep_path = Path(semgrep_sarif_path)
         self.bandit_path = Path(bandit_sarif_path)
+        logger.debug(f"Initialized SARIFReportMerger - semgrep: {self.semgrep_path}, bandit: {self.bandit_path}")
         
         # Load rule mappings from external file
         if mappings_file is None:
@@ -35,16 +40,16 @@ class SARIFReportMerger:
             self.cwe_severity_mappings = data.get("cwe_severity_mapping", {})
             self.cwe_descriptions = data.get("cwe_descriptions", {})
             
-            print(f"Loaded {len(mappings)} rule mappings from {mappings_file}")
+            logger.info(f"Loaded {len(mappings)} rule mappings from {mappings_file}")
             return mappings
             
         except FileNotFoundError:
-            print(f"Warning: Mappings file {mappings_file} not found. Using empty mappings.")
+            logger.warning(f"Mappings file {mappings_file} not found. Using empty mappings.")
             self.cwe_severity_mappings = {}
             self.cwe_descriptions = {}
             return {}
         except json.JSONDecodeError as e:
-            print(f"Warning: Invalid JSON in {mappings_file}: {e}. Using empty mappings.")
+            logger.warning(f"Invalid JSON in {mappings_file}: {e}. Using empty mappings.")
             self.cwe_severity_mappings = {}
             self.cwe_descriptions = {}
             return {}
@@ -270,22 +275,22 @@ class SARIFReportMerger:
         """Main method to merge SARIF reports."""
         
         # Load SARIF files
-        print(f"Loading semgrep report: {self.semgrep_path}")
+        logger.info(f"Loading semgrep report: {self.semgrep_path}")
         semgrep_data = self.load_sarif(self.semgrep_path)
         
-        print(f"Loading bandit report: {self.bandit_path}")
+        logger.info(f"Loading bandit report: {self.bandit_path}")
         bandit_data = self.load_sarif(self.bandit_path)
         
         # Extract findings
-        print("Extracting findings...")
+        logger.info("Extracting findings...")
         semgrep_findings = self.extract_findings(semgrep_data, "semgrep")
         bandit_findings = self.extract_findings(bandit_data, "bandit")
         
-        print(f"Found {len(semgrep_findings)} semgrep findings")
-        print(f"Found {len(bandit_findings)} bandit findings")
+        logger.info(f"Found {len(semgrep_findings)} semgrep findings")
+        logger.info(f"Found {len(bandit_findings)} bandit findings")
         
         # Match and categorize findings
-        print("Matching findings by location...")
+        logger.info("Matching findings by location...")
         categorized = self.match_findings(semgrep_findings, bandit_findings)
         
         # Generate summary
@@ -306,22 +311,135 @@ class SARIFReportMerger:
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(merged_report, f, indent=2, ensure_ascii=False)
         
-        print(f"\nMerged report saved to: {output_file}")
-        print(f"Summary:")
-        print(f"  Total findings: {summary['total_findings']}")
-        print(f"  Found by both tools: {summary['both_tools']}")
-        print(f"  Semgrep only: {summary['semgrep_only']}")
-        print(f"  Bandit only: {summary['bandit_only']}")
-        print(f"  Agreement rate: {summary['coverage']['agreement_rate']:.1f}%")
+        logger.info(f"Merged report saved to: {output_file}")
+        logger.info(f"Summary:")
+        logger.info(f"  Total findings: {summary['total_findings']}")
+        logger.info(f"  Found by both tools: {summary['both_tools']}")
+        logger.info(f"  Semgrep only: {summary['semgrep_only']}")
+        logger.info(f"  Bandit only: {summary['bandit_only']}")
+        logger.info(f"  Agreement rate: {summary['coverage']['agreement_rate']:.1f}%")
         
         return merged_report
+
+
+def run_report_merger(**kwargs) -> Dict[str, Any]:
+    """
+    Agent-friendly helper function for merging SARIF reports.
+    
+    Args:
+        semgrep_file (str): Path to semgrep SARIF file (required)
+        bandit_file (str): Path to bandit SARIF file (required)
+        output_file (str, optional): Output file path (default: 'merged_sast_report.json')
+        mappings_file (str, optional): Path to rule mappings JSON file
+        log_level (str, optional): Logging level ('DEBUG', 'INFO', 'WARNING', 'ERROR')
+        
+    Returns:
+        Dict with standardized format:
+        {
+            "success": bool,
+            "data": {
+                "merged_report": report dict or None,
+                "total_findings": int,
+                "semgrep_findings": int,
+                "bandit_findings": int,
+                "both_tools": int,
+                "agreement_rate": float,
+                "output_file": str
+            },
+            "error": str or None,
+            "metadata": {
+                "semgrep_file": str,
+                "bandit_file": str,
+                "mappings_file": str
+            }
+        }
+    """
+    # Set logging level if provided
+    if 'log_level' in kwargs:
+        logger.setLevel(getattr(logging, kwargs['log_level'].upper(), logging.INFO))
+    
+    # Validate required parameters
+    missing_params = []
+    if 'semgrep_file' not in kwargs:
+        missing_params.append('semgrep_file')
+    if 'bandit_file' not in kwargs:
+        missing_params.append('bandit_file')
+    
+    if missing_params:
+        return {
+            "success": False,
+            "data": None,
+            "error": f"Required parameters missing: {', '.join(missing_params)}",
+            "metadata": {}
+        }
+    
+    # Extract parameters with defaults
+    semgrep_file = kwargs['semgrep_file']
+    bandit_file = kwargs['bandit_file']
+    output_file = kwargs.get('output_file', 'merged_sast_report.json')
+    mappings_file = kwargs.get('mappings_file')
+    
+    try:
+        # Initialize merger
+        merger = SARIFReportMerger(semgrep_file, bandit_file, mappings_file)
+        
+        # Run merge
+        merged_report = merger.merge_reports(output_file)
+        
+        if merged_report is None:
+            return {
+                "success": False,
+                "data": None,
+                "error": "Report merging failed or produced no results",
+                "metadata": {
+                    "semgrep_file": str(semgrep_file),
+                    "bandit_file": str(bandit_file),
+                    "mappings_file": str(mappings_file) if mappings_file else "default"
+                }
+            }
+        
+        # Extract summary data
+        summary = merged_report.get("summary", {})
+        findings = merged_report.get("findings", {})
+        
+        return {
+            "success": True,
+            "data": {
+                "merged_report": merged_report,
+                "total_findings": summary.get("total_findings", 0),
+                "semgrep_findings": len(findings.get("semgrep", [])),
+                "bandit_findings": len(findings.get("bandit", [])),
+                "both_tools": summary.get("both_tools", 0),
+                "agreement_rate": summary.get("coverage", {}).get("agreement_rate", 0.0),
+                "output_file": output_file
+            },
+            "error": None,
+            "metadata": {
+                "semgrep_file": str(semgrep_file),
+                "bandit_file": str(bandit_file),
+                "mappings_file": str(mappings_file) if mappings_file else "default"
+            }
+        }
+        
+    except Exception as e:
+        logger.exception("Exception occurred during report merging")
+        return {
+            "success": False,
+            "data": None,
+            "error": str(e),
+            "metadata": {
+                "semgrep_file": str(semgrep_file),
+                "bandit_file": str(bandit_file),
+                "mappings_file": str(mappings_file) if mappings_file else "default"
+            }
+        }
 
 
 def merge_sast_reports(
     semgrep_file: str = "sast_results_v3.sarif",
     bandit_file: str = "bandit_results_v3.sarif",
     output_file: str = "merged_report_v11.json",
-    mappings_file: str = None
+    mappings_file: Optional[str] = None
 ) -> Dict:
     """
     Merge semgrep and bandit SARIF reports.
@@ -340,27 +458,30 @@ def merge_sast_reports(
 
 
 def main():
-    """Example usage with Python parameters."""
-    try:
-        # Merge SAST reports
-        dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_5/"
-        result = merge_sast_reports(
-            semgrep_file=f"{dir_path}/semgrep_report.sarif",
-            bandit_file=f"{dir_path}/bandit_report.sarif",
-            output_file=f"{dir_path}/merged_report.json",
-            mappings_file=None  # Uses default rule_mappings.json
-        )
-        
-        print(f"\n✅ Report merging completed successfully!")
-        print(f"📊 Total findings: {result['summary']['total_findings']}")
-        
-        return result
-        
-    except Exception as e:
-        print(f"\n❌ Report merging failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return {}
+    """Example usage of the agent-friendly helper function."""
+    # Example usage of the helper function
+    dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_7"
+    semgrep_file = f"{dir_path}/semgrep_report.sarif"
+    bandit_file = f"{dir_path}/bandit_report.sarif"
+    output_file = f"{dir_path}/merged_report.json"
+    
+    result = run_report_merger(
+        semgrep_file=semgrep_file,
+        bandit_file=bandit_file,
+        output_file=output_file,
+        log_level="INFO"
+    )
+    
+    if result["success"]:
+        print(f"\n✅ Report merging successful!")
+        data = result["data"]
+        print(f"Total findings: {data['total_findings']}")
+        print(f"Agreement rate: {data['agreement_rate']:.1f}%")
+        print(f"Results saved to: {data['output_file']}")
+    else:
+        print(f"\n❌ Report merging failed: {result['error']}")
+    
+    return result
 
 
 if __name__ == "__main__":

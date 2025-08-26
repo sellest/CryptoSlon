@@ -5,14 +5,19 @@ Creates aggregated view of vulnerabilities for better analysis.
 """
 
 import json
+import logging
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Optional, Any
 from collections import defaultdict
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 
 class ReportAggregator:
-    def __init__(self, merged_report_path: str, mappings_file: str = None):
+    def __init__(self, merged_report_path: str, mappings_file: Optional[str] = None):
         self.report_path = Path(merged_report_path)
+        logger.debug(f"Initialized ReportAggregator - report: {self.report_path}")
         
         # Load rule mappings from external file
         if mappings_file is None:
@@ -27,14 +32,14 @@ class ReportAggregator:
                 data = json.load(f)
             
             groupings = data.get("semantic_groupings", {})
-            print(f"Loaded {len(groupings)} semantic groupings from {mappings_file}")
+            logger.info(f"Loaded {len(groupings)} semantic groupings from {mappings_file}")
             return groupings
             
         except FileNotFoundError:
-            print(f"Warning: Mappings file {mappings_file} not found. Using empty groupings.")
+            logger.warning(f"Mappings file {mappings_file} not found. Using empty groupings.")
             return {}
         except json.JSONDecodeError as e:
-            print(f"Warning: Invalid JSON in {mappings_file}: {e}. Using empty groupings.")
+            logger.warning(f"Invalid JSON in {mappings_file}: {e}. Using empty groupings.")
             return {}
         
     def load_merged_report(self) -> Dict:
@@ -194,7 +199,7 @@ class ReportAggregator:
         final_aggregated.update(semantic_aggregated)
         final_aggregated.update(unmatched_rules)
         
-        print(f"Created {len(semantic_aggregated)} semantic groups, kept {len(unmatched_rules)} individual rules")
+        logger.info(f"Created {len(semantic_aggregated)} semantic groups, kept {len(unmatched_rules)} individual rules")
         
         return final_aggregated
     
@@ -238,22 +243,22 @@ class ReportAggregator:
     def aggregate_report(self, output_file: str = "aggregated_sast_report.json", use_semantic_groups: bool = True) -> Dict:
         """Main method to aggregate the merged report."""
         
-        print(f"Loading merged report: {self.report_path}")
+        logger.info(f"Loading merged report: {self.report_path}")
         merged_report = self.load_merged_report()
         
-        print("Aggregating findings by rule_id...")
+        logger.info("Aggregating findings by rule_id...")
         rule_aggregated_data = self.aggregate_by_rule_id(merged_report)
         
         # Apply semantic grouping if enabled
         if use_semantic_groups and self.semantic_groupings:
-            print("Applying semantic grouping...")
+            logger.info("Applying semantic grouping...")
             aggregated_data = self.aggregate_by_semantic_groups(rule_aggregated_data)
             aggregation_type = "by_semantic_groups"
         else:
             aggregated_data = rule_aggregated_data
             aggregation_type = "by_rule_id"
         
-        print("Generating summary statistics...")
+        logger.info("Generating summary statistics...")
         summary_stats = self.generate_summary_stats(aggregated_data)
         
         # Create final aggregated report
@@ -271,25 +276,134 @@ class ReportAggregator:
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(aggregated_report, f, indent=2, ensure_ascii=False)
         
-        print(f"\nAggregated report saved to: {output_file}")
-        print(f"Summary:")
-        print(f"  Unique vulnerability types: {summary_stats['total_unique_rules']}")
-        print(f"  Total findings: {summary_stats['total_findings']}")
-        print(f"  Severity distribution: {summary_stats['severity_distribution']}")
-        print(f"  Source distribution: {summary_stats['source_distribution']}")
+        logger.info(f"Aggregated report saved to: {output_file}")
+        logger.info(f"Summary:")
+        logger.info(f"  Unique vulnerability types: {summary_stats['total_unique_rules']}")
+        logger.info(f"  Total findings: {summary_stats['total_findings']}")
+        logger.info(f"  Severity distribution: {summary_stats['severity_distribution']}")
+        logger.info(f"  Source distribution: {summary_stats['source_distribution']}")
         
         # Show top vulnerabilities
-        print(f"\nTop 5 most frequent vulnerabilities:")
+        logger.info(f"Top 5 most frequent vulnerabilities:")
         for i, vuln in enumerate(summary_stats['top_10_vulnerabilities'][:5], 1):
-            print(f"  {i}. {vuln['rule_id']} ({vuln['severity']}): {vuln['count']} occurrences")
+            logger.info(f"  {i}. {vuln['rule_id']} ({vuln['severity']}): {vuln['count']} occurrences")
         
         return aggregated_report
+
+
+def run_report_aggregator(**kwargs) -> Dict[str, Any]:
+    """
+    Agent-friendly helper function for aggregating SAST reports.
+    
+    Args:
+        input_file (str): Path to merged report JSON file (required)
+        output_file (str, optional): Output file path (default: 'aggregated_sast_report.json')
+        mappings_file (str, optional): Path to rule mappings JSON file
+        use_semantic_groups (bool, optional): Enable semantic grouping (default: True)
+        log_level (str, optional): Logging level ('DEBUG', 'INFO', 'WARNING', 'ERROR')
+        
+    Returns:
+        Dict with standardized format:
+        {
+            "success": bool,
+            "data": {
+                "aggregated_report": report dict or None,
+                "total_unique_rules": int,
+                "total_findings": int,
+                "severity_distribution": dict,
+                "source_distribution": dict,
+                "top_vulnerabilities": list,
+                "aggregation_type": str,
+                "output_file": str
+            },
+            "error": str or None,
+            "metadata": {
+                "input_file": str,
+                "mappings_file": str,
+                "use_semantic_groups": bool
+            }
+        }
+    """
+    # Set logging level if provided
+    if 'log_level' in kwargs:
+        logger.setLevel(getattr(logging, kwargs['log_level'].upper(), logging.INFO))
+    
+    # Validate required parameters
+    if 'input_file' not in kwargs:
+        return {
+            "success": False,
+            "data": None,
+            "error": "input_file is required",
+            "metadata": {}
+        }
+    
+    # Extract parameters with defaults
+    input_file = kwargs['input_file']
+    output_file = kwargs.get('output_file', 'aggregated_sast_report.json')
+    mappings_file = kwargs.get('mappings_file')
+    use_semantic_groups = kwargs.get('use_semantic_groups', True)
+    
+    try:
+        # Initialize aggregator
+        aggregator = ReportAggregator(input_file, mappings_file)
+        
+        # Run aggregation
+        aggregated_report = aggregator.aggregate_report(output_file, use_semantic_groups)
+        
+        if aggregated_report is None:
+            return {
+                "success": False,
+                "data": None,
+                "error": "Report aggregation failed or produced no results",
+                "metadata": {
+                    "input_file": str(input_file),
+                    "mappings_file": str(mappings_file) if mappings_file else "default",
+                    "use_semantic_groups": use_semantic_groups
+                }
+            }
+        
+        # Extract summary data
+        summary = aggregated_report.get("summary", {})
+        metadata_info = aggregated_report.get("metadata", {})
+        
+        return {
+            "success": True,
+            "data": {
+                "aggregated_report": aggregated_report,
+                "total_unique_rules": summary.get("total_unique_rules", 0),
+                "total_findings": summary.get("total_findings", 0),
+                "severity_distribution": summary.get("severity_distribution", {}),
+                "source_distribution": summary.get("source_distribution", {}),
+                "top_vulnerabilities": summary.get("top_10_vulnerabilities", [])[:5],
+                "aggregation_type": metadata_info.get("aggregation_type", "unknown"),
+                "output_file": output_file
+            },
+            "error": None,
+            "metadata": {
+                "input_file": str(input_file),
+                "mappings_file": str(mappings_file) if mappings_file else "default",
+                "use_semantic_groups": use_semantic_groups
+            }
+        }
+        
+    except Exception as e:
+        logger.exception("Exception occurred during report aggregation")
+        return {
+            "success": False,
+            "data": None,
+            "error": str(e),
+            "metadata": {
+                "input_file": str(input_file),
+                "mappings_file": str(mappings_file) if mappings_file else "default",
+                "use_semantic_groups": use_semantic_groups
+            }
+        }
 
 
 def aggregate_sast_report(
     input_file: str = "merged_report_v11.json",
     output_file: str = "aggregated_sast_report_v4.json",
-    mappings_file: str = None,
+    mappings_file: Optional[str] = None,
     use_semantic_groups: bool = True
 ) -> Dict:
     """
@@ -309,27 +423,30 @@ def aggregate_sast_report(
 
 
 def main():
-    """Example usage with Python parameters."""
-    try:
-        # Aggregate SAST report with semantic grouping
-        dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_5/"
-        result = aggregate_sast_report(
-            input_file=f"{dir_path}/merged_report.json",
-            output_file=f"{dir_path}/aggregated_report.json",
-            mappings_file=None,  # Uses default rule_mappings.json
-            use_semantic_groups=True
-        )
-        
-        print(f"\n✅ Report aggregation completed successfully!")
-        print(f"📊 Generated {len(result['aggregated_findings'])} aggregated findings")
-        
-        return result
-        
-    except Exception as e:
-        print(f"\n❌ Report aggregation failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return {}
+    """Example usage of the agent-friendly helper function."""
+    # Example usage of the helper function
+    dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_7"
+    input_file = f"{dir_path}/merged_report.json"
+    output_file = f"{dir_path}/aggregated_report.json"
+    
+    result = run_report_aggregator(
+        input_file=input_file,
+        output_file=output_file,
+        use_semantic_groups=True,
+        log_level="INFO"
+    )
+    
+    if result["success"]:
+        print(f"\n✅ Report aggregation successful!")
+        data = result["data"]
+        print(f"Unique vulnerability types: {data['total_unique_rules']}")
+        print(f"Total findings: {data['total_findings']}")
+        print(f"Aggregation type: {data['aggregation_type']}")
+        print(f"Results saved to: {data['output_file']}")
+    else:
+        print(f"\n❌ Report aggregation failed: {result['error']}")
+    
+    return result
 
 
 if __name__ == "__main__":

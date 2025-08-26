@@ -36,10 +36,23 @@ class PromptManager:
         """Get formatted prompt from template"""
         template_data = self.load_template(template_name)
         
-        if 'system' not in template_data:
-            raise ValueError(f"Template '{template_name}' missing 'system' key")
+        # Handle both old format (system key) and new format (messages array)
+        prompt_template = None
         
-        prompt_template = template_data['system']
+        if 'system' in template_data:
+            # Old format with direct system key
+            prompt_template = template_data['system']
+        elif 'messages' in template_data:
+            # New format with messages array - extract system message
+            for message in template_data['messages']:
+                if message.get('role') == 'system':
+                    prompt_template = message.get('content')
+                    break
+            
+            if not prompt_template:
+                raise ValueError(f"Template '{template_name}' has messages but no system role message")
+        else:
+            raise ValueError(f"Template '{template_name}' missing 'system' key or 'messages' array")
         
         if template_vars:
             # Use Python's string Template for safe variable substitution

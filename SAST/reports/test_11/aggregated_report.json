@@ -1,0 +1,473 @@
+{
+  "metadata": {
+    "source_report": "/Users/izelikson/python/CryptoSlon/SAST/reports/test_11/merged_report.json",
+    "generated_at": "2025-08-24T00:00:00Z",
+    "aggregation_type": "by_semantic_groups"
+  },
+  "summary": {
+    "total_unique_rules": 12,
+    "total_findings": 197,
+    "severity_distribution": {
+      "HIGH": 4,
+      "MEDIUM": 7,
+      "LOW": 186
+    },
+    "source_distribution": {
+      "bandit": 11,
+      "semgrep": 186
+    },
+    "top_10_vulnerabilities": [
+      {
+        "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.hardcoded-api-secrets",
+        "count": 137,
+        "severity": "LOW"
+      },
+      {
+        "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.flask-privilege-magic-role-check",
+        "count": 11,
+        "severity": "LOW"
+      },
+      {
+        "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.flask-privilege-magic-role-check-enhanced",
+        "count": 10,
+        "severity": "LOW"
+      },
+      {
+        "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.flask-passrec-no-rate-limit",
+        "count": 8,
+        "severity": "LOW"
+      },
+      {
+        "rule_id": "SECRETS",
+        "count": 7,
+        "severity": "MEDIUM"
+      },
+      {
+        "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.logging-sensitive-data-enhanced",
+        "count": 7,
+        "severity": "LOW"
+      },
+      {
+        "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.logging-passwords",
+        "count": 5,
+        "severity": "LOW"
+      },
+      {
+        "rule_id": "CODE_INJECTION",
+        "count": 4,
+        "severity": "HIGH"
+      },
+      {
+        "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.python-eval-exec-taint-enhanced",
+        "count": 4,
+        "severity": "LOW"
+      },
+      {
+        "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.flask-admin-route-weak-authz",
+        "count": 2,
+        "severity": "LOW"
+      }
+    ]
+  },
+  "aggregated_findings": {
+    "CODE_INJECTION": {
+      "rule_id": "CODE_INJECTION",
+      "rule_description": "Code Injection Vulnerabilities",
+      "message": "Execution of untrusted code through eval, exec, or similar functions",
+      "severity": "HIGH",
+      "sources": [
+        "bandit"
+      ],
+      "count": 4,
+      "files": [
+        "/taskstate_10/tsapp/routes.py"
+      ],
+      "evidence_locations": [
+        "/taskstate_10/tsapp/routes.py:217-217",
+        "/taskstate_10/tsapp/routes.py:218-218",
+        "/taskstate_10/tsapp/routes.py:258-258",
+        "/taskstate_10/tsapp/routes.py:262-262"
+      ],
+      "grouped_cwes": [
+        {
+          "cwe": "CWE-95",
+          "count": 4,
+          "original_description": "Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')"
+        }
+      ]
+    },
+    "SECRETS": {
+      "rule_id": "SECRETS",
+      "rule_description": "Hard-coded Secrets/Credentials",
+      "message": "Hard-coded passwords, API keys, or other sensitive credentials in source code",
+      "severity": "MEDIUM",
+      "sources": [
+        "bandit"
+      ],
+      "count": 7,
+      "files": [
+        "/taskstate_10/tsapp/routes.py",
+        "/taskstate_10/tsapp/sconfig.py"
+      ],
+      "evidence_locations": [
+        "/taskstate_10/tsapp/routes.py:102-102",
+        "/taskstate_10/tsapp/routes.py:123-123",
+        "/taskstate_10/tsapp/routes.py:149-149",
+        "/taskstate_10/tsapp/routes.py:173-173",
+        "/taskstate_10/tsapp/routes.py:182-182",
+        "/taskstate_10/tsapp/routes.py:486-486",
+        "/taskstate_10/tsapp/sconfig.py:3-3"
+      ],
+      "grouped_cwes": [
+        {
+          "cwe": "CWE-259",
+          "count": 7,
+          "original_description": "Use of Hard-coded Password"
+        }
+      ]
+    },
+    "Users.izelikson.python.CryptoSlon.SAST.rules.python-eval-exec-taint-enhanced": {
+      "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.python-eval-exec-taint-enhanced",
+      "rule_description": "",
+      "message": "Code injection vulnerability: eval/exec with user input. Never pass request.* values to eval/exec. Use ast.literal_eval() for safe parsing.\n",
+      "severity": "LOW",
+      "sources": [
+        "semgrep"
+      ],
+      "count": 4,
+      "files": [
+        "/taskstate_10/tsapp/routes.py"
+      ],
+      "evidence_locations": [
+        "/taskstate_10/tsapp/routes.py:217-217",
+        "/taskstate_10/tsapp/routes.py:218-218",
+        "/taskstate_10/tsapp/routes.py:258-258",
+        "/taskstate_10/tsapp/routes.py:262-262"
+      ]
+    },
+    "Users.izelikson.python.CryptoSlon.SAST.rules.hardcoded-api-secrets": {
+      "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.hardcoded-api-secrets",
+      "rule_description": "",
+      "message": "CWE-798: Hard-coded API key or token detected. Store in environment variables or secret manager.\n",
+      "severity": "LOW",
+      "sources": [
+        "semgrep"
+      ],
+      "count": 137,
+      "files": [
+        "/taskstate_10/app.py",
+        "/taskstate_10/tsapp/config.py",
+        "/taskstate_10/tsapp/func.py",
+        "/taskstate_10/tsapp/models.py",
+        "/taskstate_10/tsapp/routes.py",
+        "/taskstate_10/tsapp/sconfig.py"
+      ],
+      "evidence_locations": [
+        "/taskstate_10/app.py:7-7",
+        "/taskstate_10/tsapp/config.py:3-3",
+        "/taskstate_10/tsapp/config.py:4-4",
+        "/taskstate_10/tsapp/config.py:5-5",
+        "/taskstate_10/tsapp/config.py:6-6",
+        "/taskstate_10/tsapp/config.py:7-7",
+        "/taskstate_10/tsapp/config.py:8-8",
+        "/taskstate_10/tsapp/func.py:14-14",
+        "/taskstate_10/tsapp/func.py:16-16",
+        "/taskstate_10/tsapp/func.py:18-18",
+        "/taskstate_10/tsapp/func.py:23-23",
+        "/taskstate_10/tsapp/func.py:25-25",
+        "/taskstate_10/tsapp/func.py:28-28",
+        "/taskstate_10/tsapp/func.py:31-31",
+        "/taskstate_10/tsapp/func.py:36-36",
+        "/taskstate_10/tsapp/func.py:42-42",
+        "/taskstate_10/tsapp/func.py:7-7",
+        "/taskstate_10/tsapp/func.py:9-9",
+        "/taskstate_10/tsapp/models.py:10-10",
+        "/taskstate_10/tsapp/models.py:11-11",
+        "/taskstate_10/tsapp/models.py:12-12",
+        "/taskstate_10/tsapp/models.py:13-13",
+        "/taskstate_10/tsapp/models.py:14-14",
+        "/taskstate_10/tsapp/models.py:15-15",
+        "/taskstate_10/tsapp/models.py:16-16",
+        "/taskstate_10/tsapp/models.py:17-17",
+        "/taskstate_10/tsapp/models.py:21-21",
+        "/taskstate_10/tsapp/models.py:22-22",
+        "/taskstate_10/tsapp/models.py:23-23",
+        "/taskstate_10/tsapp/models.py:24-24",
+        "/taskstate_10/tsapp/models.py:25-25",
+        "/taskstate_10/tsapp/models.py:26-26",
+        "/taskstate_10/tsapp/models.py:27-27",
+        "/taskstate_10/tsapp/models.py:28-28",
+        "/taskstate_10/tsapp/models.py:29-29",
+        "/taskstate_10/tsapp/models.py:30-30",
+        "/taskstate_10/tsapp/models.py:31-31",
+        "/taskstate_10/tsapp/models.py:5-5",
+        "/taskstate_10/tsapp/models.py:9-9",
+        "/taskstate_10/tsapp/routes.py:102-102",
+        "/taskstate_10/tsapp/routes.py:122-122",
+        "/taskstate_10/tsapp/routes.py:123-123",
+        "/taskstate_10/tsapp/routes.py:126-126",
+        "/taskstate_10/tsapp/routes.py:127-127",
+        "/taskstate_10/tsapp/routes.py:129-129",
+        "/taskstate_10/tsapp/routes.py:130-130",
+        "/taskstate_10/tsapp/routes.py:143-143",
+        "/taskstate_10/tsapp/routes.py:145-145",
+        "/taskstate_10/tsapp/routes.py:148-148",
+        "/taskstate_10/tsapp/routes.py:149-149",
+        "/taskstate_10/tsapp/routes.py:153-153",
+        "/taskstate_10/tsapp/routes.py:154-154",
+        "/taskstate_10/tsapp/routes.py:156-156",
+        "/taskstate_10/tsapp/routes.py:160-160",
+        "/taskstate_10/tsapp/routes.py:164-164",
+        "/taskstate_10/tsapp/routes.py:168-168",
+        "/taskstate_10/tsapp/routes.py:170-170",
+        "/taskstate_10/tsapp/routes.py:172-172",
+        "/taskstate_10/tsapp/routes.py:173-173",
+        "/taskstate_10/tsapp/routes.py:177-177",
+        "/taskstate_10/tsapp/routes.py:178-178",
+        "/taskstate_10/tsapp/routes.py:180-180",
+        "/taskstate_10/tsapp/routes.py:181-181",
+        "/taskstate_10/tsapp/routes.py:182-182",
+        "/taskstate_10/tsapp/routes.py:191-191",
+        "/taskstate_10/tsapp/routes.py:209-209",
+        "/taskstate_10/tsapp/routes.py:22-22",
+        "/taskstate_10/tsapp/routes.py:23-23",
+        "/taskstate_10/tsapp/routes.py:238-238",
+        "/taskstate_10/tsapp/routes.py:239-239",
+        "/taskstate_10/tsapp/routes.py:241-241",
+        "/taskstate_10/tsapp/routes.py:243-243",
+        "/taskstate_10/tsapp/routes.py:25-25",
+        "/taskstate_10/tsapp/routes.py:255-255",
+        "/taskstate_10/tsapp/routes.py:259-259",
+        "/taskstate_10/tsapp/routes.py:26-26",
+        "/taskstate_10/tsapp/routes.py:260-260",
+        "/taskstate_10/tsapp/routes.py:261-261",
+        "/taskstate_10/tsapp/routes.py:284-284",
+        "/taskstate_10/tsapp/routes.py:29-29",
+        "/taskstate_10/tsapp/routes.py:301-301",
+        "/taskstate_10/tsapp/routes.py:302-302",
+        "/taskstate_10/tsapp/routes.py:304-304",
+        "/taskstate_10/tsapp/routes.py:306-306",
+        "/taskstate_10/tsapp/routes.py:308-308",
+        "/taskstate_10/tsapp/routes.py:309-309",
+        "/taskstate_10/tsapp/routes.py:317-317",
+        "/taskstate_10/tsapp/routes.py:318-318",
+        "/taskstate_10/tsapp/routes.py:32-32",
+        "/taskstate_10/tsapp/routes.py:320-320",
+        "/taskstate_10/tsapp/routes.py:322-322",
+        "/taskstate_10/tsapp/routes.py:337-337",
+        "/taskstate_10/tsapp/routes.py:34-34",
+        "/taskstate_10/tsapp/routes.py:344-344",
+        "/taskstate_10/tsapp/routes.py:345-345",
+        "/taskstate_10/tsapp/routes.py:347-347",
+        "/taskstate_10/tsapp/routes.py:36-36",
+        "/taskstate_10/tsapp/routes.py:365-365",
+        "/taskstate_10/tsapp/routes.py:366-366",
+        "/taskstate_10/tsapp/routes.py:368-368",
+        "/taskstate_10/tsapp/routes.py:37-37",
+        "/taskstate_10/tsapp/routes.py:386-386",
+        "/taskstate_10/tsapp/routes.py:387-387",
+        "/taskstate_10/tsapp/routes.py:388-388",
+        "/taskstate_10/tsapp/routes.py:39-39",
+        "/taskstate_10/tsapp/routes.py:395-395",
+        "/taskstate_10/tsapp/routes.py:397-397",
+        "/taskstate_10/tsapp/routes.py:399-399",
+        "/taskstate_10/tsapp/routes.py:401-401",
+        "/taskstate_10/tsapp/routes.py:403-403",
+        "/taskstate_10/tsapp/routes.py:413-413",
+        "/taskstate_10/tsapp/routes.py:414-414",
+        "/taskstate_10/tsapp/routes.py:415-415",
+        "/taskstate_10/tsapp/routes.py:417-417",
+        "/taskstate_10/tsapp/routes.py:418-418",
+        "/taskstate_10/tsapp/routes.py:422-422",
+        "/taskstate_10/tsapp/routes.py:424-424",
+        "/taskstate_10/tsapp/routes.py:435-435",
+        "/taskstate_10/tsapp/routes.py:437-437",
+        "/taskstate_10/tsapp/routes.py:457-457",
+        "/taskstate_10/tsapp/routes.py:459-459",
+        "/taskstate_10/tsapp/routes.py:480-480",
+        "/taskstate_10/tsapp/routes.py:481-481",
+        "/taskstate_10/tsapp/routes.py:486-486",
+        "/taskstate_10/tsapp/routes.py:59-59",
+        "/taskstate_10/tsapp/routes.py:66-66",
+        "/taskstate_10/tsapp/routes.py:67-67",
+        "/taskstate_10/tsapp/routes.py:68-68",
+        "/taskstate_10/tsapp/routes.py:71-71",
+        "/taskstate_10/tsapp/routes.py:88-88",
+        "/taskstate_10/tsapp/routes.py:96-96",
+        "/taskstate_10/tsapp/routes.py:97-97",
+        "/taskstate_10/tsapp/sconfig.py:3-3",
+        "/taskstate_10/tsapp/sconfig.py:4-4",
+        "/taskstate_10/tsapp/sconfig.py:5-5",
+        "/taskstate_10/tsapp/sconfig.py:6-6",
+        "/taskstate_10/tsapp/sconfig.py:7-7"
+      ]
+    },
+    "Users.izelikson.python.CryptoSlon.SAST.rules.logging-sensitive-data-enhanced": {
+      "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.logging-sensitive-data-enhanced",
+      "rule_description": "",
+      "message": "Information disclosure (CWE-532): Logging potentially sensitive data. Avoid logging passwords, tokens, or personal information.\n",
+      "severity": "LOW",
+      "sources": [
+        "semgrep"
+      ],
+      "count": 7,
+      "files": [
+        "/taskstate_10/tsapp/routes.py"
+      ],
+      "evidence_locations": [
+        "/taskstate_10/tsapp/routes.py:135-135",
+        "/taskstate_10/tsapp/routes.py:146-146",
+        "/taskstate_10/tsapp/routes.py:151-151",
+        "/taskstate_10/tsapp/routes.py:157-157",
+        "/taskstate_10/tsapp/routes.py:162-162",
+        "/taskstate_10/tsapp/routes.py:165-165",
+        "/taskstate_10/tsapp/routes.py:193-193"
+      ]
+    },
+    "Users.izelikson.python.CryptoSlon.SAST.rules.flask-passrec-no-rate-limit": {
+      "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.flask-passrec-no-rate-limit",
+      "rule_description": "",
+      "message": "CWE-640: Password recovery route without apparent rate limiting. Implement rate limiting to prevent brute force attacks on recovery tokens.\n",
+      "severity": "LOW",
+      "sources": [
+        "semgrep"
+      ],
+      "count": 8,
+      "files": [
+        "/taskstate_10/tsapp/routes.py"
+      ],
+      "evidence_locations": [
+        "/taskstate_10/tsapp/routes.py:120-196",
+        "/taskstate_10/tsapp/routes.py:213-232",
+        "/taskstate_10/tsapp/routes.py:252-278",
+        "/taskstate_10/tsapp/routes.py:392-407",
+        "/taskstate_10/tsapp/routes.py:476-501",
+        "/taskstate_10/tsapp/routes.py:63-80",
+        "/taskstate_10/tsapp/routes.py:83-90",
+        "/taskstate_10/tsapp/routes.py:93-117"
+      ]
+    },
+    "Users.izelikson.python.CryptoSlon.SAST.rules.logging-passwords": {
+      "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.logging-passwords",
+      "rule_description": "",
+      "message": "Утечка чувствительных данных через логи (CWE-532): строка логирования содержит 'password'. Не логируйте пароли/секреты; маскируйте значения.\n",
+      "severity": "LOW",
+      "sources": [
+        "semgrep"
+      ],
+      "count": 5,
+      "files": [
+        "/taskstate_10/tsapp/routes.py"
+      ],
+      "evidence_locations": [
+        "/taskstate_10/tsapp/routes.py:113-113",
+        "/taskstate_10/tsapp/routes.py:174-174",
+        "/taskstate_10/tsapp/routes.py:186-186",
+        "/taskstate_10/tsapp/routes.py:497-497",
+        "/taskstate_10/tsapp/routes.py:77-77"
+      ]
+    },
+    "Users.izelikson.python.CryptoSlon.SAST.rules.flask-privilege-magic-role-check": {
+      "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.flask-privilege-magic-role-check",
+      "rule_description": "",
+      "message": "Эвристика CWE-269: жёсткая проверка роли по «магическому числу/строке». Убедитесь, что rid не приходит из cookie, и что проверка выполняется на серверной роли (current_user / серверная сессия).\n",
+      "severity": "LOW",
+      "sources": [
+        "semgrep"
+      ],
+      "count": 11,
+      "files": [
+        "/taskstate_10/app.py",
+        "/taskstate_10/tsapp/func.py",
+        "/taskstate_10/tsapp/routes.py"
+      ],
+      "evidence_locations": [
+        "/taskstate_10/app.py:14-17",
+        "/taskstate_10/tsapp/func.py:24-25",
+        "/taskstate_10/tsapp/func.py:26-28",
+        "/taskstate_10/tsapp/func.py:29-31",
+        "/taskstate_10/tsapp/func.py:30-31",
+        "/taskstate_10/tsapp/routes.py:303-304",
+        "/taskstate_10/tsapp/routes.py:305-306",
+        "/taskstate_10/tsapp/routes.py:307-308",
+        "/taskstate_10/tsapp/routes.py:398-399",
+        "/taskstate_10/tsapp/routes.py:400-401",
+        "/taskstate_10/tsapp/routes.py:402-403"
+      ]
+    },
+    "Users.izelikson.python.CryptoSlon.SAST.rules.flask-privilege-magic-role-check-enhanced": {
+      "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.flask-privilege-magic-role-check-enhanced",
+      "rule_description": "",
+      "message": "CWE-269: Direct role comparison with magic values. Ensure response.status_code comes from authenticated server-side source, not from user-controlled data (cookies, headers, form data).\n",
+      "severity": "LOW",
+      "sources": [
+        "semgrep"
+      ],
+      "count": 10,
+      "files": [
+        "/taskstate_10/tsapp/routes.py"
+      ],
+      "evidence_locations": [
+        "/taskstate_10/tsapp/routes.py:201-202",
+        "/taskstate_10/tsapp/routes.py:216-232",
+        "/taskstate_10/tsapp/routes.py:257-275",
+        "/taskstate_10/tsapp/routes.py:416-429",
+        "/taskstate_10/tsapp/routes.py:423-429",
+        "/taskstate_10/tsapp/routes.py:436-451",
+        "/taskstate_10/tsapp/routes.py:458-473",
+        "/taskstate_10/tsapp/routes.py:479-501",
+        "/taskstate_10/tsapp/routes.py:65-80",
+        "/taskstate_10/tsapp/routes.py:95-117"
+      ]
+    },
+    "Users.izelikson.python.CryptoSlon.SAST.rules.flask-ssti-render-template-string-taint": {
+      "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.flask-ssti-render-template-string-taint",
+      "rule_description": "",
+      "message": "Возможная SSTI (CWE-1336): пользовательский ввод попадает в render_template_string(). Проверьте, что строка не формируется из request.args/request.form/request.values/JSON.\n",
+      "severity": "LOW",
+      "sources": [
+        "semgrep"
+      ],
+      "count": 1,
+      "files": [
+        "/taskstate_10/tsapp/routes.py"
+      ],
+      "evidence_locations": [
+        "/taskstate_10/tsapp/routes.py:405-405"
+      ]
+    },
+    "Users.izelikson.python.CryptoSlon.SAST.rules.flask-admin-route-weak-authz": {
+      "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.flask-admin-route-weak-authz",
+      "rule_description": "",
+      "message": "CWE-269: Admin route with potentially weak authorization. Verify that authorization checks are sufficient and cannot be bypassed.\n",
+      "severity": "LOW",
+      "sources": [
+        "semgrep"
+      ],
+      "count": 2,
+      "files": [
+        "/taskstate_10/tsapp/routes.py"
+      ],
+      "evidence_locations": [
+        "/taskstate_10/tsapp/routes.py:235-249",
+        "/taskstate_10/tsapp/routes.py:410-429"
+      ]
+    },
+    "Users.izelikson.python.CryptoSlon.SAST.rules.jwt-encode-without-exp-claim-enhanced": {
+      "rule_id": "Users.izelikson.python.CryptoSlon.SAST.rules.jwt-encode-without-exp-claim-enhanced",
+      "rule_description": "",
+      "message": "CWE-640: JWT token without expiration. Add 'exp' field and verify token expiration. Tokens should be single-use and short-lived for password recovery.\n",
+      "severity": "LOW",
+      "sources": [
+        "semgrep"
+      ],
+      "count": 1,
+      "files": [
+        "/taskstate_10/tsapp/func.py"
+      ],
+      "evidence_locations": [
+        "/taskstate_10/tsapp/func.py:37-37"
+      ]
+    }
+  }
+}

@@ -5,12 +5,34 @@ and creates detailed vulnerability objects with code context.
 """
 
 import json
+import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
+# Setup logging
+logger = logging.getLogger(__name__)
+
 
 class SnippetExtractor:
-    def __init__(self, triage_analysis_path: str, code_base_path: str = ""):
+    """
+    Extracts code snippets from vulnerability locations identified in SAST triage reports.
+    
+    This class processes triage analysis JSON files to extract vulnerable code snippets
+    with configurable context lines. It supports both absolute and relative file paths
+    and can generate both JSON and Markdown reports.
+    
+    Attributes:
+        triage_analysis_path (str): Path to the triage analysis JSON file
+        code_base_path (str): Base path for resolving relative file paths
+        triage_data (Dict[str, Any]): Loaded triage analysis data
+        vulnerabilities (List[Dict[str, Any]]): List of vulnerability findings
+        
+    Example:
+        extractor = SnippetExtractor("triage_analysis.json", "/path/to/code")
+        vulnerabilities = extractor.extract_vulnerability_snippets(context_lines=5)
+    """
+    
+    def __init__(self, triage_analysis_path: str, code_base_path: str = "") -> None:
         """
         Initialize Snippet Extractor
         
@@ -20,6 +42,7 @@ class SnippetExtractor:
         """
         self.triage_analysis_path = triage_analysis_path
         self.code_base_path = code_base_path
+        logger.debug(f"Initialized SnippetExtractor - triage: {triage_analysis_path}, code_base: {code_base_path}")
         
         # Load triage analysis report
         self.triage_data = self._load_json(triage_analysis_path)
@@ -30,13 +53,13 @@ class SnippetExtractor:
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            print(f"✅ Loaded: {file_path}")
+            logger.info(f"Loaded: {file_path}")
             return data
         except FileNotFoundError:
-            print(f"❌ File not found: {file_path}")
+            logger.error(f"File not found: {file_path}")
             raise
         except json.JSONDecodeError as e:
-            print(f"❌ Invalid JSON in {file_path}: {e}")
+            logger.error(f"Invalid JSON in {file_path}: {e}")
             raise
     
     def _read_file_lines(self, file_path: str) -> List[str]:
@@ -74,27 +97,26 @@ class SnippetExtractor:
             # Handle regular relative paths
             full_path = str(Path(self.code_base_path) / file_path)
         
-        print(f"🔍 Looking for file: {file_path} -> {full_path}")
+        logger.debug(f"Looking for file: {file_path} -> {full_path}")
         
         try:
             with open(full_path, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
-            print(f"✅ Read {len(lines)} lines from: {full_path}")
+            logger.debug(f"Read {len(lines)} lines from: {full_path}")
             return lines
         except FileNotFoundError:
-            print(f"❌ File not found: {full_path}")
-            # Let's also check if the file exists without path transformations
-            print(f"🔍 Also tried: {file_path}")
+            logger.warning(f"File not found: {full_path}")
+            logger.debug(f"Also tried: {file_path}")
             return []
         except Exception as e:
-            print(f"❌ Error reading file {full_path}: {e}")
+            logger.error(f"Error reading file {full_path}: {e}")
             return []
     
     def _extract_snippet(self, 
                         file_path: str, 
                         start_line: int, 
                         end_line: int,
-                        context_lines: int = 3) -> dict:
+                        context_lines: int = 3) -> Dict[str, str]:
         """
         Extract code snippet with context.
         
@@ -146,7 +168,7 @@ class SnippetExtractor:
             "after_context": "\n".join(after_lines)
         }
     
-    def _parse_location(self, location: str) -> tuple:
+    def _parse_location(self, location: str) -> tuple[str, int, int]:
         """
         Parse location string like '/taskstate/tsapp/routes.py:416-429'
         
@@ -183,7 +205,7 @@ class SnippetExtractor:
         Returns:
             List of vulnerability objects with code snippets
         """
-        print(f"🔍 Extracting code snippets for {len(self.vulnerabilities)} vulnerabilities...")
+        logger.info(f"Extracting code snippets for {len(self.vulnerabilities)} vulnerabilities...")
         
         extracted_vulnerabilities = []
         
@@ -216,7 +238,7 @@ class SnippetExtractor:
             # Process each representative evidence location
             evidence = vuln.get("RepresentativeEvidence", [])
             if not isinstance(evidence, list):
-                print(f"⚠️  No valid evidence for vulnerability: {vulnerability_name}")
+                logger.warning(f"No valid evidence for vulnerability: {vulnerability_name}")
                 continue
             
             for evidence_item in evidence:
@@ -235,7 +257,7 @@ class SnippetExtractor:
                     continue
                 
                 if start_line == 0 and end_line == 0:
-                    print(f"⚠️  No valid line numbers for {file_path}")
+                    logger.warning(f"No valid line numbers for {file_path}")
                     continue
                 
                 # Extract code snippet
@@ -259,7 +281,6 @@ class SnippetExtractor:
                         "before": snippet_data["before_context"],
                         "after": snippet_data["after_context"]
                     },
-                    "suggested_fix": fix,
                     "risk": risk,
                     "severity": severity,
                     "cwe": cwe,
@@ -268,12 +289,12 @@ class SnippetExtractor:
                 
                 extracted_vulnerabilities.append(vuln_with_snippet)
         
-        print(f"✅ Extracted snippets for {len(extracted_vulnerabilities)} vulnerabilities")
+        logger.info(f"Extracted snippets for {len(extracted_vulnerabilities)} vulnerabilities")
         return extracted_vulnerabilities
     
     def save_snippet_report(self, 
                            vulnerabilities: List[Dict[str, Any]], 
-                           output_file: str):
+                           output_file: str) -> None:
         """Save vulnerability snippets to JSON file."""
         report = {
             "metadata": {
@@ -288,11 +309,11 @@ class SnippetExtractor:
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
         
-        print(f"💾 Snippet report saved to: {output_file}")
+        logger.info(f"Snippet report saved to: {output_file}")
     
     def generate_markdown_report(self, 
                                 vulnerabilities: List[Dict[str, Any]], 
-                                output_file: str):
+                                output_file: str) -> None:
         """Generate a markdown report with code snippets."""
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write("# Vulnerability Report with Code Snippets\n\n")
@@ -324,12 +345,120 @@ class SnippetExtractor:
                     f.write(vuln['location']['vulnerable_lines_only'])
                     f.write("\n```\n\n")
                     
-                    if vuln['suggested_fix']:
-                        f.write(f"**Suggested Fix:** {vuln['suggested_fix']}\n\n")
                     
                     f.write("---\n\n")
         
-        print(f"📝 Markdown report saved to: {output_file}")
+        logger.info(f"Markdown report saved to: {output_file}")
+
+
+def run_snippet_extractor(**kwargs) -> Dict[str, Any]:
+    """
+    Agent-friendly helper function for extracting vulnerability code snippets.
+    
+    Args:
+        triage_analysis (str): Path to triage analysis JSON file (required)
+        output_file (str, optional): Output JSON file path (default: 'vulnerability_snippets.json')
+        markdown_output (str, optional): Optional markdown report output
+        code_base_path (str, optional): Base path for code files (default: '')
+        context_lines (int, optional): Number of context lines around vulnerable code (default: 10)
+        show_samples (bool, optional): Whether to show sample extracted snippets (default: False)
+        log_level (str, optional): Logging level ('DEBUG', 'INFO', 'WARNING', 'ERROR')
+        
+    Returns:
+        Dict with standardized format:
+        {
+            "success": bool,
+            "data": {
+                "vulnerabilities": list of vulnerability objects or None,
+                "total_snippets": int,
+                "output_file": str,
+                "markdown_output": str or None,
+                "code_base_path": str,
+                "context_lines": int
+            },
+            "error": str or None,
+            "metadata": {
+                "triage_analysis": str,
+                "show_samples": bool
+            }
+        }
+    """
+    # Set logging level if provided
+    if 'log_level' in kwargs:
+        logger.setLevel(getattr(logging, kwargs['log_level'].upper(), logging.INFO))
+    
+    # Validate required parameters
+    if 'triage_analysis' not in kwargs:
+        return {
+            "success": False,
+            "data": None,
+            "error": "triage_analysis is required",
+            "metadata": {}
+        }
+    
+    # Extract parameters with defaults
+    triage_analysis = kwargs['triage_analysis']
+    output_file = kwargs.get('output_file', 'vulnerability_snippets.json')
+    markdown_output = kwargs.get('markdown_output')
+    code_base_path = kwargs.get('code_base_path', '')
+    context_lines = kwargs.get('context_lines', 10)
+    show_samples = kwargs.get('show_samples', False)
+    
+    try:
+        # Initialize extractor
+        extractor = SnippetExtractor(triage_analysis, code_base_path)
+        
+        # Extract vulnerability snippets
+        vulnerabilities = extractor.extract_vulnerability_snippets(context_lines)
+        
+        # Save JSON report
+        extractor.save_snippet_report(vulnerabilities, output_file)
+        
+        # Generate markdown report if requested
+        if markdown_output:
+            extractor.generate_markdown_report(vulnerabilities, markdown_output)
+        
+        # Show samples if requested
+        if show_samples and vulnerabilities:
+            logger.info(f"Sample extracted vulnerabilities:")
+            for vuln in vulnerabilities[:2]:  # Show first 2
+                logger.info(f"{vuln['vulnerability']}")
+                logger.info(f"  File: {vuln['file']} (lines {vuln['location']})")
+                logger.info(f"  Severity: {vuln['severity']}")
+                logger.info(f"  Risk: {vuln['risk'][:100]}...")
+                logger.debug(f"  Code snippet preview:")
+                snippet_lines = vuln['location']['vulnerable_lines_only'].split('\n')[:5]
+                for line in snippet_lines:
+                    logger.debug(f"    {line}")
+        
+        return {
+            "success": True,
+            "data": {
+                "vulnerabilities": vulnerabilities,
+                "total_snippets": len(vulnerabilities),
+                "output_file": output_file,
+                "markdown_output": markdown_output,
+                "code_base_path": code_base_path,
+                "context_lines": context_lines
+            },
+            "error": None,
+            "metadata": {
+                "triage_analysis": str(triage_analysis),
+                "show_samples": show_samples
+            }
+        }
+        
+    except Exception as e:
+        logger.exception("Exception occurred during snippet extraction")
+        return {
+            "success": False,
+            "data": None,
+            "error": str(e),
+            "metadata": {
+                "triage_analysis": str(triage_analysis),
+                "show_samples": show_samples
+            }
+        }
 
 
 def extract_snippets(
@@ -366,56 +495,57 @@ def extract_snippets(
     
     # Show samples if requested
     if show_samples and vulnerabilities:
-        print(f"\n📋 Sample extracted vulnerabilities:")
+        logger.info(f"Sample extracted vulnerabilities:")
         for vuln in vulnerabilities[:2]:  # Show first 2
-            print(f"\n🔸 {vuln['vulnerability']}")
-            print(f"  File: {vuln['file']} (lines {vuln['location']})")
-            print(f"  Severity: {vuln['severity']}")
-            print(f"  Fix: {vuln['suggested_fix'][:100]}...")
-            print(f"  Code snippet preview:")
+            logger.info(f"{vuln['vulnerability']}")
+            logger.info(f"  File: {vuln['file']} (lines {vuln['location']})")
+            logger.info(f"  Severity: {vuln['severity']}")
+            logger.info(f"  Risk: {vuln['risk'][:100]}...")
+            logger.debug(f"  Code snippet preview:")
             snippet_lines = vuln['location']['vulnerable_lines_only'].split('\n')[:5]
             for line in snippet_lines:
-                print(f"    {line}")
+                logger.debug(f"    {line}")
     
     return vulnerabilities
 
 
 def main():
-    """Example usage with Python parameters."""
-    try:
-        # Extract snippets from triage analysis report
-        dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_5"
-        vulnerabilities = extract_snippets(
-            triage_analysis=f"{dir_path}/triage_analysis.json",
-            output_file=f"{dir_path}/vulnerability_snippets.json",
-            # markdown_output="/Users/izelikson/python/CryptoSlon/SAST/reports/first_test/vulnerability_report_v2.md",
-            code_base_path="/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_3",  # Base path for relative file paths
-            context_lines=5,  # Show K lines before and after vulnerable code
-            show_samples=True
-        )
+    """Example usage of the agent-friendly helper function."""
+    # Example usage of the helper function
+    dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_7"
+    
+    result = run_snippet_extractor(
+        triage_analysis=f"{dir_path}/triage_analysis.json",
+        output_file=f"{dir_path}/vulnerability_snippets.json",
+        code_base_path="/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_5",
+        context_lines=5,
+        show_samples=False,
+        log_level="INFO"
+    )
+    
+    if result["success"]:
+        print(f"\n✅ Snippet extraction successful!")
+        data = result["data"]
+        print(f"Total snippets extracted: {data['total_snippets']}")
+        print(f"Output file: {data['output_file']}")
+        print(f"Code base path: {data['code_base_path']}")
+        print(f"Context lines: {data['context_lines']}")
         
-        print(f"\n✅ Snippet extraction completed successfully!")
-        print(f"📝 Extracted {len(vulnerabilities)} vulnerability snippets")
-        
-        # Example: Programmatic access to results
+        # Example: Count by severity
+        vulnerabilities = data['vulnerabilities']
         if vulnerabilities:
-            # Count by severity
             severity_counts = {}
             for vuln in vulnerabilities:
                 severity = vuln.get("severity", "UNKNOWN")
                 severity_counts[severity] = severity_counts.get(severity, 0) + 1
             
-            print(f"\n📊 Summary by severity:")
+            print(f"Summary by severity:")
             for severity, count in severity_counts.items():
                 print(f"  {severity}: {count}")
-        
-        return vulnerabilities
-        
-    except Exception as e:
-        print(f"\n❌ Snippet extraction failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return []
+    else:
+        print(f"\n❌ Snippet extraction failed: {result['error']}")
+    
+    return result
 
 
 if __name__ == "__main__":

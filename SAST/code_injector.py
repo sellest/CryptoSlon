@@ -5,18 +5,44 @@ with both automatic and interactive modes.
 """
 
 import json
+import logging
 import os
 import shutil
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 
+# Setup logging
+logger = logging.getLogger(__name__)
+
 
 class CodeInjector:
+    """
+    Applies LLM-generated vulnerability fixes to original source files with backup and interactive modes.
+    
+    This class takes vulnerability fixes (from VulnerabilityFixer) and injects them into source files.
+    It creates backups, resolves file paths, cleans LLM responses, and provides both interactive and
+    automatic modes for applying fixes. The fixes are applied by commenting out vulnerable code
+    and adding the fixed version alongside.
+    
+    Attributes:
+        fixes_report_path (str): Path to the vulnerability fixes JSON file
+        code_base_path (str): Base path for resolving relative file paths
+        backup_dir (str): Directory path for storing file backups
+        fixes_data (Dict[str, Any]): Loaded fixes report data
+        fixes (List[Dict[str, Any]]): List of fix objects to apply
+        stats (Dict[str, Any]): Statistics tracking applied/skipped/failed fixes
+        
+    Example:
+        injector = CodeInjector("fixes.json", "/code", "/backup")
+        stats = injector.apply_all_fixes(interactive=False)
+        print(f"Applied {stats['applied']} fixes")
+    """
+    
     def __init__(self, 
                  fixes_report_path: str,
                  code_base_path: str = "",
-                 backup_dir: str = None):
+                 backup_dir: Optional[str] = None) -> None:
         """
         Initialize Code Injector
         
@@ -55,13 +81,13 @@ class CodeInjector:
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            print(f"✅ Loaded: {file_path}")
+            logger.info(f"Loaded: {file_path}")
             return data
         except FileNotFoundError:
-            print(f"❌ File not found: {file_path}")
+            logger.error(f"File not found: {file_path}")
             raise
         except json.JSONDecodeError as e:
-            print(f"❌ Invalid JSON in {file_path}: {e}")
+            logger.error(f"Invalid JSON in {file_path}: {e}")
             raise
     
     def _resolve_file_path(self, file_path: str) -> str:
@@ -186,11 +212,11 @@ class CodeInjector:
             
             # Copy file to backup
             shutil.copy2(file_path, backup_path)
-            print(f"💾 Backup created: {backup_path}")
+            logger.info(f"Backup created: {backup_path}")
             return True
             
         except Exception as e:
-            print(f"❌ Failed to create backup for {file_path}: {e}")
+            logger.error(f"Failed to create backup for {file_path}: {e}")
             return False
     
     def _read_file_lines(self, file_path: str) -> List[str]:
@@ -200,7 +226,7 @@ class CodeInjector:
                 lines = f.readlines()
             return lines
         except Exception as e:
-            print(f"❌ Error reading file {file_path}: {e}")
+            logger.error(f"Error reading file {file_path}: {e}")
             return []
     
     def _write_file_lines(self, file_path: str, lines: List[str]) -> bool:
@@ -208,10 +234,10 @@ class CodeInjector:
         try:
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.writelines(lines)
-            print(f"✅ File updated: {file_path}")
+            logger.info(f"File updated: {file_path}")
             return True
         except Exception as e:
-            print(f"❌ Error writing file {file_path}: {e}")
+            logger.error(f"Error writing file {file_path}: {e}")
             return False
     
     def _apply_fix_to_lines(self, 
@@ -289,25 +315,25 @@ class CodeInjector:
                           end_line: int,
                           context_lines: int = 3) -> None:
         """Show a diff preview of the changes."""
-        print("\n" + "="*60)
-        print("📋 CHANGE PREVIEW")
-        print("="*60)
+        logger.info("CHANGE PREVIEW")
+        # Header already logged above
+        # Separator already logged above
         
         # Show original vulnerable code with context
         start_idx = max(0, start_line - 1 - context_lines)
         end_idx = min(len(original_lines), end_line + context_lines)
         
-        print("\n🔴 ORIGINAL CODE:")
+        logger.info("ORIGINAL CODE:")
         for i in range(start_idx, end_idx):
             line_num = i + 1
             line_content = original_lines[i].rstrip()
             if start_line <= line_num <= end_line:
-                print(f"{line_num:4d} >>> {line_content}")
+                logger.debug(f"{line_num:4d} >>> {line_content}")
             else:
-                print(f"{line_num:4d}     {line_content}")
+                logger.debug(f"{line_num:4d}     {line_content}")
         
         # Show new code with same context range
-        print("\n🟢 FIXED CODE:")
+        logger.info("FIXED CODE:")
         # Calculate how many lines the fix takes
         original_line_count = end_line - start_line + 1
         new_line_count = len(new_lines) - len(original_lines) + original_line_count
@@ -316,7 +342,7 @@ class CodeInjector:
         for i in range(start_idx, start_line - 1):
             line_num = i + 1
             line_content = original_lines[i].rstrip()
-            print(f"{line_num:4d}     {line_content}")
+            logger.debug(f"{line_num:4d}     {line_content}")
         
         # Show fixed lines
         fixed_start_idx = start_line - 1
@@ -324,7 +350,7 @@ class CodeInjector:
             line_num = start_line + i
             if fixed_start_idx + i < len(new_lines):
                 line_content = new_lines[fixed_start_idx + i].rstrip()
-                print(f"{line_num:4d} +++ {line_content}")
+                logger.debug(f"{line_num:4d} +++ {line_content}")
         
         # Show context after (adjust for line count difference)
         line_diff = len(new_lines) - len(original_lines)
@@ -332,15 +358,15 @@ class CodeInjector:
             adjusted_line_num = i + 1 + line_diff
             if i < len(original_lines):
                 line_content = original_lines[i].rstrip()
-                print(f"{adjusted_line_num:4d}     {line_content}")
+                logger.debug(f"{adjusted_line_num:4d}     {line_content}")
     
     def _get_user_confirmation(self, vulnerability_info: Dict[str, Any]) -> str:
         """Get user confirmation for applying fix (similar to Claude's prompt)."""
-        print(f"\n🔸 Vulnerability: {vulnerability_info.get('type', 'Unknown')}")
-        print(f"📁 File: {vulnerability_info.get('file', 'Unknown')}")
-        print(f"📍 Location: Lines {vulnerability_info.get('location', 'Unknown')}")
-        print(f"⚠️  Severity: {vulnerability_info.get('severity', 'Unknown')}")
-        print(f"🏷️  CWE: {vulnerability_info.get('cwe', 'Unknown')}")
+        logger.info(f"Vulnerability: {vulnerability_info.get('type', 'Unknown')}")
+        logger.info(f"File: {vulnerability_info.get('file', 'Unknown')}")
+        logger.info(f"Location: Lines {vulnerability_info.get('location', 'Unknown')}")
+        logger.info(f"Severity: {vulnerability_info.get('severity', 'Unknown')}")
+        logger.info(f"CWE: {vulnerability_info.get('cwe', 'Unknown')}")
         
         while True:
             choice = input("\nApply this fix? [y]es/[n]o/[s]kip all remaining/[q]uit: ").lower().strip()
@@ -353,7 +379,7 @@ class CodeInjector:
             elif choice in ['q', 'quit']:
                 return 'quit'
             else:
-                print("Please enter 'y', 'n', 's', or 'q'")
+                logger.warning("Please enter 'y', 'n', 's', or 'q'")
     
     def apply_single_fix(self, 
                         fix: Dict[str, Any], 
@@ -374,7 +400,7 @@ class CodeInjector:
         fixed_code = fix.get("llm_response", "")
         
         if not fixed_code or not fixed_code.strip():
-            print(f"⚠️  No fix available for: {vulnerability_info.get('type', 'Unknown')}")
+            logger.warning(f"No fix available for: {vulnerability_info.get('type', 'Unknown')}")
             return 'skipped'
         
         # Resolve file path
@@ -382,13 +408,13 @@ class CodeInjector:
         location = vulnerability_info.get("location", "")
         
         if not os.path.exists(file_path):
-            print(f"❌ File not found: {file_path}")
+            logger.error(f"File not found: {file_path}")
             return 'failed'
         
         # Parse location
         start_line, end_line = self._parse_location(location)
         if start_line == 0 or end_line == 0:
-            print(f"❌ Invalid location: {location}")
+            logger.error(f"Invalid location: {location}")
             return 'failed'
         
         # Read original file
@@ -403,7 +429,7 @@ class CodeInjector:
         try:
             new_lines = self._apply_fix_to_lines(original_lines, start_line, end_line, fixed_code, cwe_info)
         except Exception as e:
-            print(f"❌ Failed to apply fix: {e}")
+            logger.error(f"Failed to apply fix: {e}")
             return 'failed'
         
         # Show preview and get confirmation if interactive
@@ -420,15 +446,19 @@ class CodeInjector:
         elif force_skip_all:
             return 'skipped'
         
-        # Create backup
-        if not self.stats["backup_created"]:
+        # Create backup for this file if not already backed up
+        if not hasattr(self, '_backed_up_files'):
+            self._backed_up_files = set()
+        
+        if file_path not in self._backed_up_files:
             backup_success = self._create_backup(file_path)
             if backup_success:
+                self._backed_up_files.add(file_path)
                 self.stats["backup_created"] = True
         
         # Apply the fix
         if self._write_file_lines(file_path, new_lines):
-            print(f"✅ Applied fix to {file_path} (lines {start_line}-{end_line})")
+            logger.info(f"Applied fix to {file_path} (lines {start_line}-{end_line})")
             return 'applied'
         else:
             return 'failed'
@@ -443,22 +473,22 @@ class CodeInjector:
         Returns:
             Statistics dictionary
         """
-        print(f"🔧 Processing {len(self.fixes)} vulnerability fixes...")
-        print(f"📁 Code base: {self.code_base_path}")
-        print(f"💾 Backup directory: {self.backup_dir}")
-        print(f"🎛️  Mode: {'Interactive' if interactive else 'Automatic'}")
+        logger.info(f"Processing {len(self.fixes)} vulnerability fixes...")
+        logger.info(f"Code base: {self.code_base_path}")
+        logger.info(f"Backup directory: {self.backup_dir}")
+        logger.info(f"Mode: {'Interactive' if interactive else 'Automatic'}")
         
         if interactive:
-            print("\nStarting interactive mode. You'll be asked to confirm each fix.")
+            logger.info("Starting interactive mode. You'll be asked to confirm each fix.")
         else:
-            print("\nStarting automatic mode. All fixes will be applied without confirmation.")
+            logger.info("Starting automatic mode. All fixes will be applied without confirmation.")
         
         self.stats["total_fixes"] = len(self.fixes)
         skip_all_remaining = False
         
         for i, fix in enumerate(self.fixes, 1):
             vulnerability_info = fix.get("vulnerability_info", {})
-            print(f"\n[{i}/{len(self.fixes)}] Processing: {vulnerability_info.get('type', 'Unknown')[:50]}...")
+            logger.info(f"[{i}/{len(self.fixes)}] Processing: {vulnerability_info.get('type', 'Unknown')[:50]}...")
             
             # Apply fix
             result = self.apply_single_fix(fix, interactive, skip_all_remaining)
@@ -474,37 +504,147 @@ class CodeInjector:
                 self.stats["skipped"] += 1
                 skip_all_remaining = True
             elif result == 'quit':
-                print(f"\n🛑 Stopped at user request")
+                logger.info(f"Stopped at user request")
                 break
         
         # Generate summary
         self._print_summary()
         return self.stats
     
-    def _print_summary(self):
+    def _print_summary(self) -> None:
         """Print execution summary."""
-        print(f"\n{'='*50}")
-        print(f"📊 CODE INJECTION SUMMARY")
-        print(f"{'='*50}")
-        print(f"Total fixes processed: {self.stats['total_fixes']}")
-        print(f"✅ Successfully applied: {self.stats['applied']}")
-        print(f"⏭️  Skipped: {self.stats['skipped']}")
-        print(f"❌ Failed: {self.stats['failed']}")
+        logger.info(f"CODE INJECTION SUMMARY")
+        logger.info(f"Total fixes processed: {self.stats['total_fixes']}")
+        logger.info(f"Successfully applied: {self.stats['applied']}")
+        logger.info(f"Skipped: {self.stats['skipped']}")
+        logger.info(f"Failed: {self.stats['failed']}")
         
         if self.stats['total_fixes'] > 0:
             success_rate = (self.stats['applied'] / self.stats['total_fixes']) * 100
-            print(f"📈 Success rate: {success_rate:.1f}%")
+            logger.info(f"Success rate: {success_rate:.1f}%")
         
         if self.stats["backup_created"]:
-            print(f"💾 Backups created in: {self.backup_dir}")
+            logger.info(f"Backups created in: {self.backup_dir}")
+        # Summary complete
+
+
+def run_code_injector(**kwargs) -> Dict[str, Any]:
+    """
+    Agent-friendly helper function for injecting vulnerability fixes into source files.
+    
+    Args:
+        fixes_report (str): Path to vulnerability fixes JSON file (required)
+        code_base_path (str, optional): Base path for code files (default: '')
+        backup_dir (str, optional): Directory for backups (default: None for auto-generated)
+        interactive (bool, optional): Whether to ask for confirmation (default: False)
+        show_summary (bool, optional): Whether to display injection summary (default: False)
+        log_level (str, optional): Logging level ('DEBUG', 'INFO', 'WARNING', 'ERROR')
         
-        print(f"{'='*50}")
+    Returns:
+        Dict with standardized format:
+        {
+            "success": bool,
+            "data": {
+                "stats": dict with injection statistics,
+                "total_fixes": int,
+                "applied": int,
+                "skipped": int,
+                "failed": int,
+                "success_rate": float,
+                "backup_created": bool,
+                "backup_dir": str,
+                "code_base_path": str
+            },
+            "error": str or None,
+            "metadata": {
+                "fixes_report": str,
+                "interactive": bool,
+                "show_summary": bool
+            }
+        }
+    """
+    # Set logging level if provided
+    if 'log_level' in kwargs:
+        logger.setLevel(getattr(logging, kwargs['log_level'].upper(), logging.INFO))
+    
+    # Validate required parameters
+    if 'fixes_report' not in kwargs:
+        return {
+            "success": False,
+            "data": None,
+            "error": "fixes_report is required",
+            "metadata": {}
+        }
+    
+    # Extract parameters with defaults
+    fixes_report = kwargs['fixes_report']
+    code_base_path = kwargs.get('code_base_path', '')
+    backup_dir = kwargs.get('backup_dir')
+    interactive = kwargs.get('interactive', False)
+    show_summary = kwargs.get('show_summary', False)
+    
+    try:
+        # Initialize injector
+        injector = CodeInjector(fixes_report, code_base_path, backup_dir)
+        
+        # Apply fixes
+        stats = injector.apply_all_fixes(interactive)
+        
+        # Calculate success rate
+        success_rate = 0.0
+        if stats['total_fixes'] > 0:
+            success_rate = (stats['applied'] / stats['total_fixes']) * 100
+        
+        # Display summary if requested
+        if show_summary:
+            logger.info(f"CODE INJECTION SUMMARY")
+            logger.info(f"Total fixes processed: {stats['total_fixes']}")
+            logger.info(f"Successfully applied: {stats['applied']}")
+            logger.info(f"Skipped: {stats['skipped']}")
+            logger.info(f"Failed: {stats['failed']}")
+            logger.info(f"Success rate: {success_rate:.1f}%")
+            if stats["backup_created"]:
+                logger.info(f"Backups created in: {injector.backup_dir}")
+        
+        return {
+            "success": True,
+            "data": {
+                "stats": stats,
+                "total_fixes": stats['total_fixes'],
+                "applied": stats['applied'],
+                "skipped": stats['skipped'],
+                "failed": stats['failed'],
+                "success_rate": success_rate,
+                "backup_created": stats['backup_created'],
+                "backup_dir": injector.backup_dir,
+                "code_base_path": code_base_path
+            },
+            "error": None,
+            "metadata": {
+                "fixes_report": str(fixes_report),
+                "interactive": interactive,
+                "show_summary": show_summary
+            }
+        }
+        
+    except Exception as e:
+        logger.exception("Exception occurred during code injection")
+        return {
+            "success": False,
+            "data": None,
+            "error": str(e),
+            "metadata": {
+                "fixes_report": str(fixes_report),
+                "interactive": interactive,
+                "show_summary": show_summary
+            }
+        }
 
 
 def inject_fixes(
     fixes_report: str,
     code_base_path: str = "",
-    backup_dir: str = None,
+    backup_dir: Optional[str] = None,
     interactive: bool = True,
     show_summary: bool = True
 ) -> Dict[str, Any]:
@@ -525,34 +665,40 @@ def inject_fixes(
     stats = injector.apply_all_fixes(interactive)
     
     if show_summary:
-        print(f"\n✅ Code injection completed!")
+        logger.info(f"Code injection completed!")
         
     return stats
 
 
 def main():
-    """Example usage with Python parameters."""
-    try:
-        # Inject fixes from vulnerability fixes report
-        dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_5/"
-        stats = inject_fixes(
-            fixes_report=f"{dir_path}vulnerability_fixes.json",
-            code_base_path="/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_3/",
-            backup_dir=None,  # Will use default: {code_base_path}_backup
-            interactive=False,  # Set to False for automatic mode
-            show_summary=True
-        )
-        
-        print(f"\n✅ Code injection completed successfully!")
-        print(f"🔧 Applied {stats['applied']} out of {stats['total_fixes']} fixes")
-        
-        return stats
-        
-    except Exception as e:
-        print(f"\n❌ Code injection failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return {}
+    """Example usage of the agent-friendly helper function."""
+    # Example usage of the helper function
+    dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_7"
+    
+    result = run_code_injector(
+        fixes_report=f"{dir_path}/vulnerability_fixes.json",
+        code_base_path="/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_5/",
+        backup_dir=None,  # Will use default: {code_base_path}_backup
+        interactive=False,  # Set to False for automatic mode
+        show_summary=False,
+        log_level="INFO"
+    )
+    
+    if result["success"]:
+        print(f"\n✅ Code injection successful!")
+        data = result["data"]
+        print(f"Total fixes: {data['total_fixes']}")
+        print(f"Applied: {data['applied']}")
+        print(f"Skipped: {data['skipped']}")
+        print(f"Failed: {data['failed']}")
+        print(f"Success rate: {data['success_rate']:.1f}%")
+        print(f"Code base path: {data['code_base_path']}")
+        print(f"Backup directory: {data['backup_dir']}")
+        print(f"Backup created: {data['backup_created']}")
+    else:
+        print(f"\n❌ Code injection failed: {result['error']}")
+    
+    return result
 
 
 if __name__ == "__main__":

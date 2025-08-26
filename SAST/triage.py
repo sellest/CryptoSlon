@@ -6,9 +6,13 @@ Processes SAST findings and provides vulnerability triage with human-readable an
 
 import json
 import argparse
+import logging
 import sys
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 # Add parent directory to path to import LLMs and prompts
 sys.path.append(str(Path(__file__).parent.parent))
@@ -29,22 +33,23 @@ class SASTTriageAnalyzer:
         self.model = model
         self.template_name = template_name
         self.progress_indicator = ProgressIndicator()
+        logger.debug(f"Initialized SASTTriageAnalyzer - model: {model}, template: {template_name}")
         
         # Initialize LLM client
         try:
             self.llm_client = get_llm_client(model)
-            print(f"✅ Initialized LLM client: {model}")
+            logger.info(f"Initialized LLM client: {model}")
         except Exception as e:
-            print(f"❌ Failed to initialize LLM client: {e}")
+            logger.error(f"Failed to initialize LLM client: {e}")
             raise
         
         # Initialize prompt manager
         try:
             self.prompt_manager = PromptManager()
-            print(f"✅ Initialized prompt manager")
-            print(f"Available templates: {self.prompt_manager.list_templates()}")
+            logger.info(f"Initialized prompt manager")
+            logger.debug(f"Available templates: {self.prompt_manager.list_templates()}")
         except Exception as e:
-            print(f"❌ Failed to initialize prompt manager: {e}")
+            logger.error(f"Failed to initialize prompt manager: {e}")
             raise
     
     def load_sast_report(self, report_path: str) -> Dict[str, Any]:
@@ -52,13 +57,13 @@ class SASTTriageAnalyzer:
         try:
             with open(report_path, 'r', encoding='utf-8') as f:
                 report = json.load(f)
-            print(f"✅ Loaded SAST report: {report_path}")
+            logger.info(f"Loaded SAST report: {report_path}")
             return report
         except FileNotFoundError:
-            print(f"❌ SAST report file not found: {report_path}")
+            logger.error(f"SAST report file not found: {report_path}")
             raise
         except json.JSONDecodeError as e:
-            print(f"❌ Invalid JSON in SAST report: {e}")
+            logger.error(f"Invalid JSON in SAST report: {e}")
             raise
     
     def prepare_messages(self, sast_report: Dict[str, Any]) -> List[Dict[str, str]]:
@@ -89,21 +94,21 @@ class SASTTriageAnalyzer:
                     "content": content
                 })
             
-            print(f"✅ Prepared {len(messages)} messages for LLM")
+            logger.info(f"Prepared {len(messages)} messages for LLM")
             
             # Debug: Show message structure
             for i, msg in enumerate(messages):
                 role = msg["role"]
                 content_preview = msg["content"][:100].replace('\n', ' ')
-                print(f"  Message {i+1}: {role} - {content_preview}...")
+                logger.debug(f"  Message {i+1}: {role} - {content_preview}...")
             
             return messages
             
         except Exception as e:
-            print(f"❌ Failed to prepare messages: {e}")
+            logger.error(f"Failed to prepare messages: {e}")
             raise
     
-    def analyze_sast_report(self, report_path: str, output_file: str = None) -> Dict[str, Any]:
+    def analyze_sast_report(self, report_path: str, output_file: Optional[str] = None) -> Dict[str, Any]:
         """
         Main method to analyze SAST report using LLM.
         
@@ -114,27 +119,26 @@ class SASTTriageAnalyzer:
         Returns:
             Analysis results from LLM
         """
-        print(f"🔍 Starting SAST triage analysis...")
-        print(f"Report: {report_path}")
-        print(f"Model: {self.model}")
-        print(f"Template: {self.template_name}")
-        print("=" * 60)
+        logger.info(f"Starting SAST triage analysis...")
+        logger.info(f"Report: {report_path}")
+        logger.info(f"Model: {self.model}")
+        logger.info(f"Template: {self.template_name}")
         
         # Load SAST report
         sast_report = self.load_sast_report(report_path)
         
         # Display report summary
         summary = sast_report.get("summary", {})
-        print(f"\n📊 Report Summary:")
-        print(f"  Total findings: {summary.get('total_findings', 'N/A')}")
-        print(f"  Unique vulnerability types: {summary.get('total_unique_rules', 'N/A')}")
-        print(f"  Severity distribution: {summary.get('severity_distribution', 'N/A')}")
+        logger.info(f"Report Summary:")
+        logger.info(f"  Total findings: {summary.get('total_findings', 'N/A')}")
+        logger.info(f"  Unique vulnerability types: {summary.get('total_unique_rules', 'N/A')}")
+        logger.info(f"  Severity distribution: {summary.get('severity_distribution', 'N/A')}")
         
         # Prepare messages using prompt template
         messages = self.prepare_messages(sast_report)
         
         # Call LLM for analysis
-        print(f"\n🤖 Calling {self.model} for analysis...")
+        logger.info(f"Calling {self.model} for analysis...")
         
         # Start progress indicator
         self.progress_indicator.start(f"Waiting for {self.model} response")
@@ -144,25 +148,24 @@ class SASTTriageAnalyzer:
             
             # Stop progress indicator
             self.progress_indicator.stop()
-            print(f"✅ Received response from LLM")
+            logger.info(f"Received response from LLM")
             
             # Try to parse as JSON if possible
-            analysis_result = {}
             json_content = response
             
             # Handle JSON wrapped in markdown code blocks
             if response.strip().startswith("```json") and response.strip().endswith("```"):
                 json_content = response.strip()[7:-3].strip()
-                print(f"🔧 Extracted JSON from markdown code blocks")
+                logger.debug(f"Extracted JSON from markdown code blocks")
             elif response.strip().startswith("```") and response.strip().endswith("```"):
                 json_content = response.strip()[3:-3].strip()
-                print(f"🔧 Extracted content from code blocks")
+                logger.debug(f"Extracted content from code blocks")
             
             try:
                 analysis_result = json.loads(json_content)
-                print(f"✅ Successfully parsed JSON response")
+                logger.info(f"Successfully parsed JSON response")
             except json.JSONDecodeError:
-                print(f"⚠️  Response is not valid JSON, treating as text")
+                logger.warning(f"Response is not valid JSON, treating as text")
                 analysis_result = {
                     "analysis_text": response,
                     "metadata": {
@@ -186,16 +189,15 @@ class SASTTriageAnalyzer:
             if output_file:
                 with open(output_file, 'w', encoding='utf-8') as f:
                     json.dump(analysis_result, f, indent=2, ensure_ascii=False)
-                print(f"💾 Analysis saved to: {output_file}")
+                logger.info(f"Analysis saved to: {output_file}")
             
             return analysis_result
             
         except Exception as e:
             # Make sure to stop progress indicator on error
             self.progress_indicator.stop()
-            print(f"❌ LLM analysis failed: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f"LLM analysis failed: {e}")
+            logger.exception("Full traceback:")
             raise
     
     def display_analysis_summary(self, analysis: Dict[str, Any]):
@@ -231,9 +233,131 @@ class SASTTriageAnalyzer:
                 print(f"  ... ({len(lines) - 10} more lines)")
 
 
+def run_sast_triage(**kwargs) -> Dict[str, Any]:
+    """
+    Agent-friendly helper function for SAST triage analysis.
+    
+    Args:
+        input_file (str): Path to aggregated SAST report JSON file (required)
+        output_file (str, optional): Output file path for analysis results
+        model (str, optional): LLM model to use (default: 'gpt-4o-mini')
+        template (str, optional): Prompt template name (default: 'sast')
+        show_summary (bool, optional): Whether to display analysis summary (default: False)
+        log_level (str, optional): Logging level ('DEBUG', 'INFO', 'WARNING', 'ERROR')
+        
+    Returns:
+        Dict with standardized format:
+        {
+            "success": bool,
+            "data": {
+                "analysis_result": analysis dict or None,
+                "is_json": bool,
+                "total_findings": int,
+                "unique_rules": int,
+                "severity_distribution": dict,
+                "output_file": str,
+                "model_used": str,
+                "template_used": str
+            },
+            "error": str or None,
+            "metadata": {
+                "input_file": str,
+                "model": str,
+                "template": str,
+                "show_summary": bool
+            }
+        }
+    """
+    # Set logging level if provided
+    if 'log_level' in kwargs:
+        logger.setLevel(getattr(logging, kwargs['log_level'].upper(), logging.INFO))
+    
+    # Validate required parameters
+    if 'input_file' not in kwargs:
+        return {
+            "success": False,
+            "data": None,
+            "error": "input_file is required",
+            "metadata": {}
+        }
+    
+    # Extract parameters with defaults
+    input_file = kwargs['input_file']
+    output_file = kwargs.get('output_file')
+    model = kwargs.get('model', 'gpt-4o-mini')
+    template = kwargs.get('template', 'sast')
+    show_summary = kwargs.get('show_summary', False)
+    
+    try:
+        # Initialize analyzer
+        triage_analyzer = SASTTriageAnalyzer(model=model, template_name=template)
+        
+        # Load report to extract summary info
+        sast_report = triage_analyzer.load_sast_report(input_file)
+        summary = sast_report.get("summary", {})
+        
+        # Run analysis
+        analysis_result = triage_analyzer.analyze_sast_report(input_file, output_file)
+        
+        # Display summary if requested
+        if show_summary:
+            triage_analyzer.display_analysis_summary(analysis_result)
+        
+        if analysis_result is None:
+            return {
+                "success": False,
+                "data": None,
+                "error": "Analysis failed or produced no results",
+                "metadata": {
+                    "input_file": str(input_file),
+                    "model": str(model),
+                    "template": str(template),
+                    "show_summary": show_summary
+                }
+            }
+        
+        # Extract metadata
+        metadata = analysis_result.get("metadata", {})
+        
+        return {
+            "success": True,
+            "data": {
+                "analysis_result": analysis_result,
+                "is_json": metadata.get("is_json", False),
+                "total_findings": summary.get("total_findings", 0),
+                "unique_rules": summary.get("total_unique_rules", 0),
+                "severity_distribution": summary.get("severity_distribution", {}),
+                "output_file": output_file if output_file else "not_saved",
+                "model_used": model,
+                "template_used": template
+            },
+            "error": None,
+            "metadata": {
+                "input_file": str(input_file),
+                "model": str(model),
+                "template": str(template),
+                "show_summary": show_summary
+            }
+        }
+        
+    except Exception as e:
+        logger.exception("Exception occurred during SAST triage analysis")
+        return {
+            "success": False,
+            "data": None,
+            "error": str(e),
+            "metadata": {
+                "input_file": str(input_file),
+                "model": str(model),
+                "template": str(template),
+                "show_summary": show_summary
+            }
+        }
+
+
 def analyze_sast_report(
     input_file: str,
-    output_file: str = None,
+    output_file: Optional[str] = None,
     model: str = "gpt-4o-mini",
     template: str = "sast",
     show_summary: bool = True
@@ -261,55 +385,52 @@ def analyze_sast_report(
     """
     try:
         # Initialize analyzer
-        analyzer = SASTTriageAnalyzer(model=model, template_name=template)
+        triage_analyzer = SASTTriageAnalyzer(model=model, template_name=template)
         
         # Run analysis
-        analysis_result = analyzer.analyze_sast_report(input_file, output_file)
+        analysis_result = triage_analyzer.analyze_sast_report(input_file, output_file)
         
         # Display summary if requested
         if show_summary:
-            analyzer.display_analysis_summary(analysis_result)
+            triage_analyzer.display_analysis_summary(analysis_result)
         
-        print(f"\n✅ SAST triage analysis completed successfully!")
+        logger.info(f"SAST triage analysis completed successfully!")
         return analysis_result
         
     except Exception as e:
-        print(f"\n❌ Analysis failed: {e}")
+        logger.error(f"Analysis failed: {e}")
         raise
 
 
 def main():
-    """Command line interface (optional)."""
-    parser = argparse.ArgumentParser(description="SAST Triage - Analyze aggregated SAST reports using LLM")
-    parser.add_argument("--input", required=True, help="Path to aggregated SAST report JSON file")
-    parser.add_argument("--output", help="Output file path for analysis results")
-    parser.add_argument("--model", default="gpt-4o-mini", help="LLM model to use (default: gpt-4o-mini)")
-    parser.add_argument("--template", default="sast", help="Prompt template name (default: sast)")
-    parser.add_argument("--summary", action="store_true", help="Display analysis summary after completion")
+    """Example usage of the agent-friendly helper function."""
+    # Example usage of the helper function
+    dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_7"
+    input_file = f"{dir_path}/aggregated_report.json"
+    output_file = f"{dir_path}/triage_analysis.json"
     
-    args = parser.parse_args()
-    
-    analyze_sast_report(
-        input_file=args.input,
-        output_file=args.output,
-        model=args.model,
-        template=args.template,
-        show_summary=args.summary
+    result = run_sast_triage(
+        input_file=input_file,
+        output_file=output_file,
+        model="gigachat-pro",
+        template="sast_v4",
+        show_summary=False,
+        log_level="INFO"
     )
+    
+    if result["success"]:
+        print(f"\n✅ SAST triage analysis successful!")
+        data = result["data"]
+        print(f"Model used: {data['model_used']}")
+        print(f"Template used: {data['template_used']}")
+        print(f"Total findings analyzed: {data['total_findings']}")
+        print(f"Response format: {'JSON' if data['is_json'] else 'Text'}")
+        print(f"Results saved to: {data['output_file']}")
+    else:
+        print(f"\n❌ SAST triage analysis failed: {result['error']}")
+    
+    return result
 
 
 if __name__ == "__main__":
-    # main()
-
-    # Initialize analyzer with specific model
-    analyzer = SASTTriageAnalyzer(
-        model="gpt-5",
-        template_name="sast_v2"
-    )
-
-    dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_5/"
-    # Run analysis
-    result = analyzer.analyze_sast_report(
-        report_path=f"{dir_path}aggregated_report.json",
-        output_file=f"{dir_path}triage_analysis.json"
-    )
+    main()

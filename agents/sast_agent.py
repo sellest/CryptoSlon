@@ -161,16 +161,6 @@ def automated_launch(
         result = run_sast_command(
             "Run complete SAST analysis on /path/to/code and generate fixes"
         )
-        
-        # Use specific tool
-        result = run_sast_command(
-            "Use sast_full_pipeline on /code/path with reports at ./reports"
-        )
-        
-        # Check specific vulnerability
-        result = run_sast_command(
-            "Analyze /path for SQL injection vulnerabilities only"
-        )
     """
     # Configure logging
     logging.basicConfig(
@@ -188,10 +178,12 @@ def automated_launch(
         # Process the command
         response = agent.process_request(command)
         
-        # Save response to report.txt
+        # Save response to report.txt with proper encoding handling
         try:
-            with open("report.txt", "w", encoding="utf-8") as f:
-                f.write(response)
+            # Clean response of any problematic characters
+            clean_response = response.encode('utf-8', errors='replace').decode('utf-8')
+            with open("sast_report.txt", "w", encoding="utf-8") as f:
+                f.write(clean_response)
             logging.info("Agent response saved to report.txt")
         except Exception as e:
             logging.warning(f"Failed to save response to report.txt: {e}")
@@ -226,7 +218,7 @@ def interactive_launch():
     
     try:
         # Create SAST agent
-        agent = create_sast_agent(llm_provider="gpt-5-mini")
+        agent = create_sast_agent(llm_provider="gigachat-max")
         
         # Example 1: Interactive agent usage
         print("🤖 SAST Security Agent ready!")

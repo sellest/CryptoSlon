@@ -62,7 +62,7 @@ class SASTAnalysisTool(BaseTool):
     @property
     def parameters(self) -> Dict[str, Any]:
         return {
-            "target_path": {
+            "code_base_path": {
                 "type": "string",
                 "description": "Path to code directory to analyze (required)"
             },
@@ -80,16 +80,16 @@ class SASTAnalysisTool(BaseTool):
             }
         }
 
-    def execute(self, target_path: str, output_dir: str = None, semgrep_config: str = "../SAST/rules/python-security.yml", log_level: str = "INFO") -> Dict[str, Any]:
+    def execute(self, code_base_path: str, output_dir: str = None, semgrep_config: str = "../SAST/rules/python-security.yml", log_level: str = "INFO") -> Dict[str, Any]:
         """Execute complete SAST analysis pipeline"""
         logger = logging.getLogger(f"tool.{self.name}")
-        logger.info(f"Running SAST analysis on: {target_path}")
+        logger.info(f"Running SAST analysis on: {code_base_path}")
         print("Активирован инструмент: sast_analysis")
         
         # Auto-create output directory if not specified
         if output_dir is None:
             from pathlib import Path
-            code_base = Path(target_path).resolve()
+            code_base = Path(code_base_path).resolve()
             output_dir = str(code_base.parent / "reports" / f"sast_analysis_{code_base.name}")
             logger.info(f"Auto-created output directory: {output_dir}")
         
@@ -109,7 +109,7 @@ class SASTAnalysisTool(BaseTool):
             # Step 1: Run Semgrep analysis
             logger.info("Step 1: Running Semgrep analysis...")
             semgrep_result = run_semgrep_analysis(
-                target_path=target_path,
+                target_path=code_base_path,
                 output_file=f"{output_dir}/semgrep_report.sarif",
                 output_format="sarif",
                 config=semgrep_config,
@@ -127,7 +127,7 @@ class SASTAnalysisTool(BaseTool):
             # Step 2: Run Bandit analysis
             logger.info("Step 2: Running Bandit analysis...")
             bandit_result = run_bandit_analysis(
-                target_path=target_path,
+                target_path=code_base_path,
                 output_file=f"{output_dir}/bandit_report.sarif",
                 output_format="sarif",
                 log_level=log_level
@@ -181,7 +181,7 @@ class SASTAnalysisTool(BaseTool):
             
             # Summary
             results["summary"] = {
-                "target_analyzed": target_path,
+                "target_analyzed": code_base_path,
                 "output_directory": output_dir,
                 "steps_completed": len(results["steps_completed"]),
                 "total_errors": len(results["errors"]),
@@ -583,8 +583,8 @@ class SASTFullPipelineTool(BaseTool):
         }
 
     def execute(self, code_base_path: str, reports_path: str = None,
-                semgrep_config: str = None, triage_model: str = "gigachat-pro",
-                fix_model: str = "gigachat-max", max_vulnerabilities: int = None,
+                semgrep_config: str = None, triage_model: str = "gigachat-max",
+                fix_model: str = "gpt-5", max_vulnerabilities: int = None,
                 context_lines: int = 5, skip_injection: bool = False,
                 interactive_injection: bool = False, log_level: str = "INFO") -> Dict[str, Any]:
         """Execute complete SAST pipeline"""

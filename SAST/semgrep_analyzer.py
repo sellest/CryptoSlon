@@ -31,6 +31,7 @@ class SemgrepAnalyzer:
             "semgrep",
             "--config", str(self.rules_path),
             format_flag,
+            "--no-git-ignore",  # Scan all files, not just git-tracked ones
             str(self.target_path)
         ]
         
@@ -186,9 +187,9 @@ def run_semgrep_analysis(**kwargs) -> Dict[str, Any]:
 def main():
     """Example usage of the agent-friendly helper function."""
     # Example usage of the helper function
-    target_path = "/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_5"
+    target_path = "/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_19"
     rules_path = "/Users/izelikson/python/CryptoSlon/SAST/rules/python-security.yml"
-    output_file = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_7/semgrep_report.sarif"
+    output_file = "/Users/izelikson/python/CryptoSlon/SAST/reports/semgrep_report.sarif"
 
     result = run_semgrep_analysis(
         target_path=target_path,

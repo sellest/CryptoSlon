@@ -549,9 +549,9 @@ def pipeline_run(**kwargs) -> Dict[str, Any]:
     
     # Pipeline configuration parameters
     semgrep_config = kwargs.get("semgrep_config", "rules/python-security.yml")
-    triage_model = kwargs.get("triage_model", "gigachat-pro")
+    triage_model = kwargs.get("triage_model", "gigachat-max")
     triage_template = kwargs.get("triage_template", "sast_v4")
-    fix_model = kwargs.get("fix_model", "gigachat-pro")
+    fix_model = kwargs.get("fix_model", "gigachat-max")
     fix_template = kwargs.get("fix_template", "vulnerability_fix_v6")
     max_vulnerabilities = kwargs.get("max_vulnerabilities", 20)
     context_lines = kwargs.get("context_lines", 5)

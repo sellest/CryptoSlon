@@ -187,7 +187,7 @@ def run_semgrep_analysis(**kwargs) -> Dict[str, Any]:
 def main():
     """Example usage of the agent-friendly helper function."""
     # Example usage of the helper function
-    target_path = "/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_19"
+    target_path = "/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_29"
     rules_path = "/Users/izelikson/python/CryptoSlon/SAST/rules/python-security.yml"
     output_file = "/Users/izelikson/python/CryptoSlon/SAST/reports/semgrep_report.sarif"
 

@@ -193,8 +193,8 @@ def run_bandit_analysis(**kwargs) -> Dict[str, Any]:
 def main():
     """Example usage of the agent-friendly helper function."""
     # Example usage of the helper function
-    target_path = "/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_5"
-    output_file = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_7/bandit_report.sarif"
+    target_path = "/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_29"
+    output_file = "/Users/izelikson/python/CryptoSlon/SAST/reports/bandit_report.sarif"
     
     result = run_bandit_analysis(
         target_path=target_path,

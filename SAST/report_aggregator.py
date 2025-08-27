@@ -425,7 +425,7 @@ def aggregate_sast_report(
 def main():
     """Example usage of the agent-friendly helper function."""
     # Example usage of the helper function
-    dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_7"
+    dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/"
     input_file = f"{dir_path}/merged_report.json"
     output_file = f"{dir_path}/aggregated_report.json"
     

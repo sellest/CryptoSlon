@@ -76,12 +76,13 @@ class FullSASTPipeline:
         semgrep_config: str = None,
         triage_model: str = "gigachat-pro",
         triage_template: str = "sast_v4",
-        fix_model: str = "gpt-4o-mini", 
-        fix_template: str = "vulnerability_fix_v6",
+        fix_model: str = "gigachat-pro",
+        fix_template: str = "vulnerability_fix_v7",
         max_vulnerabilities: Optional[int] = None,
         context_lines: int = 5,
         interactive_injection: bool = False,
-        skip_injection: bool = False
+        skip_injection: bool = False,
+        use_bandit: bool = False
     ) -> Dict[str, Any]:
         """
         Run the complete 8-stage SAST pipeline
@@ -96,6 +97,7 @@ class FullSASTPipeline:
             context_lines: Lines of context around vulnerable code
             interactive_injection: Ask for confirmation before applying fixes
             skip_injection: Skip final code injection stage (safety)
+            use_bandit: Additional vulnerability check with bandit lib
             
         Returns:
             Complete pipeline results dictionary
@@ -107,7 +109,8 @@ class FullSASTPipeline:
             self._run_semgrep_stage(semgrep_config)
             
             # Stage 2: Bandit Analysis
-            self._run_bandit_stage()
+            if use_bandit:
+                self._run_bandit_stage()
             
             # Stage 3: Report Merging
             self._run_merger_stage()
@@ -518,6 +521,7 @@ def pipeline_run(**kwargs) -> Dict[str, Any]:
         context_lines (int, optional): Context lines around vulnerable code (default: 5)
         interactive_injection (bool, optional): Interactive code injection (default: False)
         skip_injection (bool, optional): Skip code injection stage (default: False)
+        use_bandit (bool, optional): Use additional vulnerability scan (default: False)
         
     Returns:
         Dict with standardized format:
@@ -605,13 +609,14 @@ def pipeline_run(**kwargs) -> Dict[str, Any]:
 
 def usage_example():
     result = pipeline_run(
-        code_base_path="/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_9",
-        reports_path="/Users/izelikson/python/CryptoSlon/SAST/reports/test_10",
-        triage_model="gigachat-pro",
-        fix_model="gigachat-pro", 
+        code_base_path="/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_30",
+        reports_path="/Users/izelikson/python/CryptoSlon/SAST/reports",
+        triage_model="gigachat-max",
+        fix_model="gigachat-max",
         context_lines=5,
         max_vulnerabilities=10,
-        skip_injection=False  # Safety: don't modify code automatically
+        skip_injection=False,
+        use_bandit=False
     )
     
     if result["success"]:

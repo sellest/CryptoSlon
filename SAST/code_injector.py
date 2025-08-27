@@ -712,11 +712,11 @@ def inject_fixes(
 def main():
     """Example usage of the agent-friendly helper function."""
     # Example usage of the helper function
-    dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_7"
+    dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports"
     
     result = run_code_injector(
         fixes_report=f"{dir_path}/vulnerability_fixes.json",
-        code_base_path="/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_5/",
+        code_base_path="/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_29/",
         backup_dir=None,  # Will use default: {code_base_path}_backup
         interactive=False,  # Set to False for automatic mode
         show_summary=False,

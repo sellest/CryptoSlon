@@ -512,12 +512,12 @@ def extract_snippets(
 def main():
     """Example usage of the agent-friendly helper function."""
     # Example usage of the helper function
-    dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_7"
+    dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/"
     
     result = run_snippet_extractor(
         triage_analysis=f"{dir_path}/triage_analysis.json",
         output_file=f"{dir_path}/vulnerability_snippets.json",
-        code_base_path="/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_5",
+        code_base_path="/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_29",
         context_lines=5,
         show_samples=False,
         log_level="INFO"

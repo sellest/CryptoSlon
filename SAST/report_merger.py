@@ -14,10 +14,42 @@ logger = logging.getLogger(__name__)
 
 
 class SARIFReportMerger:
-    def __init__(self, semgrep_sarif_path: str, bandit_sarif_path: str, mappings_file: Optional[str] = None):
-        self.semgrep_path = Path(semgrep_sarif_path)
-        self.bandit_path = Path(bandit_sarif_path)
-        logger.debug(f"Initialized SARIFReportMerger - semgrep: {self.semgrep_path}, bandit: {self.bandit_path}")
+    def __init__(self, semgrep_sarif_path: Optional[str] = None, bandit_sarif_path: Optional[str] = None, mappings_file: Optional[str] = None):
+        # Check that at least one report path is provided
+        if not semgrep_sarif_path and not bandit_sarif_path:
+            raise ValueError("At least one report path (semgrep or bandit) must be provided")
+        
+        # Store paths and check file existence
+        self.semgrep_path = Path(semgrep_sarif_path) if semgrep_sarif_path else None
+        self.bandit_path = Path(bandit_sarif_path) if bandit_sarif_path else None
+        
+        self.semgrep_exists = self.semgrep_path and self.semgrep_path.exists()
+        self.bandit_exists = self.bandit_path and self.bandit_path.exists()
+        
+        # Check that at least one file exists
+        if not self.semgrep_exists and not self.bandit_exists:
+            error_msg = []
+            if self.semgrep_path:
+                error_msg.append(f"Semgrep report not found: {self.semgrep_path}")
+            if self.bandit_path:
+                error_msg.append(f"Bandit report not found: {self.bandit_path}")
+            raise FileNotFoundError("No report files found. " + " ".join(error_msg))
+        
+        # Log which files are available
+        logger.info(f"Report files status:")
+        if self.semgrep_exists:
+            logger.info(f"  - Semgrep: {self.semgrep_path} (found)")
+        elif self.semgrep_path:
+            logger.warning(f"  - Semgrep: {self.semgrep_path} (not found, will skip)")
+        else:
+            logger.info(f"  - Semgrep: not specified")
+            
+        if self.bandit_exists:
+            logger.info(f"  - Bandit: {self.bandit_path} (found)")
+        elif self.bandit_path:
+            logger.warning(f"  - Bandit: {self.bandit_path} (not found, will skip)")
+        else:
+            logger.info(f"  - Bandit: not specified")
         
         # Load rule mappings from external file
         if mappings_file is None:
@@ -54,10 +86,17 @@ class SARIFReportMerger:
             self.cwe_descriptions = {}
             return {}
         
-    def load_sarif(self, sarif_path: Path) -> Dict:
-        """Load and parse SARIF file."""
-        with open(sarif_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+    def load_sarif(self, sarif_path: Path) -> Optional[Dict]:
+        """Load and parse SARIF file, returns None if file doesn't exist."""
+        if not sarif_path or not sarif_path.exists():
+            return None
+        
+        try:
+            with open(sarif_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError) as e:
+            logger.error(f"Failed to load SARIF file {sarif_path}: {e}")
+            return None
     
     def extract_findings(self, sarif_data: Dict, tool_name: str) -> List[Dict]:
         """Extract findings from SARIF data with normalized structure."""
@@ -177,8 +216,12 @@ class SARIFReportMerger:
         
         return ""
     
-    def match_findings(self, semgrep_findings: List[Dict], bandit_findings: List[Dict]) -> Dict:
+    def match_findings(self, semgrep_findings: Optional[List[Dict]], bandit_findings: Optional[List[Dict]]) -> Dict:
         """Match findings by location and categorize them."""
+        
+        # Handle cases where one tool has no findings
+        semgrep_findings = semgrep_findings or []
+        bandit_findings = bandit_findings or []
         
         # Create location maps for efficient matching
         semgrep_locations = {f["location_key"]: f for f in semgrep_findings}
@@ -274,17 +317,30 @@ class SARIFReportMerger:
     def merge_reports(self, output_file: str = "merged_sast_report.json") -> Dict:
         """Main method to merge SARIF reports."""
         
-        # Load SARIF files
-        logger.info(f"Loading semgrep report: {self.semgrep_path}")
-        semgrep_data = self.load_sarif(self.semgrep_path)
+        # Load SARIF files (only if they exist)
+        semgrep_data = None
+        bandit_data = None
         
-        logger.info(f"Loading bandit report: {self.bandit_path}")
-        bandit_data = self.load_sarif(self.bandit_path)
+        if self.semgrep_exists:
+            logger.info(f"Loading semgrep report: {self.semgrep_path}")
+            semgrep_data = self.load_sarif(self.semgrep_path)
+            if not semgrep_data:
+                logger.warning("Failed to load semgrep data, continuing without it")
+        else:
+            logger.info("Semgrep report not available, skipping")
+        
+        if self.bandit_exists:
+            logger.info(f"Loading bandit report: {self.bandit_path}")
+            bandit_data = self.load_sarif(self.bandit_path)
+            if not bandit_data:
+                logger.warning("Failed to load bandit data, continuing without it")
+        else:
+            logger.info("Bandit report not available, skipping")
         
         # Extract findings
         logger.info("Extracting findings...")
-        semgrep_findings = self.extract_findings(semgrep_data, "semgrep")
-        bandit_findings = self.extract_findings(bandit_data, "bandit")
+        semgrep_findings = self.extract_findings(semgrep_data, "semgrep") if semgrep_data else []
+        bandit_findings = self.extract_findings(bandit_data, "bandit") if bandit_data else []
         
         logger.info(f"Found {len(semgrep_findings)} semgrep findings")
         logger.info(f"Found {len(bandit_findings)} bandit findings")
@@ -297,12 +353,24 @@ class SARIFReportMerger:
         summary = self.generate_summary(categorized)
         
         # Create final report
+        metadata = {
+            "generated_at": "2025-08-24T00:00:00Z"  # You could use datetime.now().isoformat()
+        }
+        
+        # Only add file paths for files that were actually processed
+        if self.semgrep_exists:
+            metadata["semgrep_file"] = str(self.semgrep_path)
+        if self.bandit_exists:
+            metadata["bandit_file"] = str(self.bandit_path)
+        
+        # Note which files were missing
+        if self.semgrep_path and not self.semgrep_exists:
+            metadata["semgrep_missing"] = str(self.semgrep_path)
+        if self.bandit_path and not self.bandit_exists:
+            metadata["bandit_missing"] = str(self.bandit_path)
+            
         merged_report = {
-            "metadata": {
-                "semgrep_file": str(self.semgrep_path),
-                "bandit_file": str(self.bandit_path),
-                "generated_at": "2025-08-24T00:00:00Z"  # You could use datetime.now().isoformat()
-            },
+            "metadata": metadata,
             "summary": summary,
             "findings": categorized
         }
@@ -327,11 +395,13 @@ def run_report_merger(**kwargs) -> Dict[str, Any]:
     Agent-friendly helper function for merging SARIF reports.
     
     Args:
-        semgrep_file (str): Path to semgrep SARIF file (required)
-        bandit_file (str): Path to bandit SARIF file (required)
+        semgrep_file (str, optional): Path to semgrep SARIF file
+        bandit_file (str, optional): Path to bandit SARIF file  
         output_file (str, optional): Output file path (default: 'merged_sast_report.json')
         mappings_file (str, optional): Path to rule mappings JSON file
         log_level (str, optional): Logging level ('DEBUG', 'INFO', 'WARNING', 'ERROR')
+        
+    Note: At least one of semgrep_file or bandit_file must be provided.
         
     Returns:
         Dict with standardized format:
@@ -348,8 +418,8 @@ def run_report_merger(**kwargs) -> Dict[str, Any]:
             },
             "error": str or None,
             "metadata": {
-                "semgrep_file": str,
-                "bandit_file": str,
+                "semgrep_file": str or None,
+                "bandit_file": str or None,
                 "mappings_file": str
             }
         }
@@ -358,24 +428,18 @@ def run_report_merger(**kwargs) -> Dict[str, Any]:
     if 'log_level' in kwargs:
         logger.setLevel(getattr(logging, kwargs['log_level'].upper(), logging.INFO))
     
-    # Validate required parameters
-    missing_params = []
-    if 'semgrep_file' not in kwargs:
-        missing_params.append('semgrep_file')
-    if 'bandit_file' not in kwargs:
-        missing_params.append('bandit_file')
-    
-    if missing_params:
+    # Check that at least one report file is provided
+    if 'semgrep_file' not in kwargs and 'bandit_file' not in kwargs:
         return {
             "success": False,
             "data": None,
-            "error": f"Required parameters missing: {', '.join(missing_params)}",
+            "error": "At least one report file (semgrep_file or bandit_file) must be provided",
             "metadata": {}
         }
     
     # Extract parameters with defaults
-    semgrep_file = kwargs['semgrep_file']
-    bandit_file = kwargs['bandit_file']
+    semgrep_file = kwargs.get('semgrep_file')
+    bandit_file = kwargs.get('bandit_file')
     output_file = kwargs.get('output_file', 'merged_sast_report.json')
     mappings_file = kwargs.get('mappings_file')
     
@@ -392,8 +456,8 @@ def run_report_merger(**kwargs) -> Dict[str, Any]:
                 "data": None,
                 "error": "Report merging failed or produced no results",
                 "metadata": {
-                    "semgrep_file": str(semgrep_file),
-                    "bandit_file": str(bandit_file),
+                    "semgrep_file": str(semgrep_file) if semgrep_file else None,
+                    "bandit_file": str(bandit_file) if bandit_file else None,
                     "mappings_file": str(mappings_file) if mappings_file else "default"
                 }
             }
@@ -415,8 +479,8 @@ def run_report_merger(**kwargs) -> Dict[str, Any]:
             },
             "error": None,
             "metadata": {
-                "semgrep_file": str(semgrep_file),
-                "bandit_file": str(bandit_file),
+                "semgrep_file": str(semgrep_file) if semgrep_file else None,
+                "bandit_file": str(bandit_file) if bandit_file else None,
                 "mappings_file": str(mappings_file) if mappings_file else "default"
             }
         }
@@ -428,16 +492,16 @@ def run_report_merger(**kwargs) -> Dict[str, Any]:
             "data": None,
             "error": str(e),
             "metadata": {
-                "semgrep_file": str(semgrep_file),
-                "bandit_file": str(bandit_file),
+                "semgrep_file": str(semgrep_file) if semgrep_file else None,
+                "bandit_file": str(bandit_file) if bandit_file else None,
                 "mappings_file": str(mappings_file) if mappings_file else "default"
             }
         }
 
 
 def merge_sast_reports(
-    semgrep_file: str = "sast_results_v3.sarif",
-    bandit_file: str = "bandit_results_v3.sarif",
+    semgrep_file: Optional[str] = "sast_results_v3.sarif",
+    bandit_file: Optional[str] = "bandit_results_v3.sarif",
     output_file: str = "merged_report_v11.json",
     mappings_file: Optional[str] = None
 ) -> Dict:
@@ -445,10 +509,12 @@ def merge_sast_reports(
     Merge semgrep and bandit SARIF reports.
     
     Args:
-        semgrep_file: Path to semgrep SARIF file
-        bandit_file: Path to bandit SARIF file
+        semgrep_file: Path to semgrep SARIF file (optional)
+        bandit_file: Path to bandit SARIF file (optional)
         output_file: Output file path for merged report
         mappings_file: Path to rule mappings JSON (optional)
+        
+    Note: At least one of semgrep_file or bandit_file must be provided.
         
     Returns:
         Merged report dictionary
@@ -460,7 +526,7 @@ def merge_sast_reports(
 def main():
     """Example usage of the agent-friendly helper function."""
     # Example usage of the helper function
-    dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_7"
+    dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/"
     semgrep_file = f"{dir_path}/semgrep_report.sarif"
     bandit_file = f"{dir_path}/bandit_report.sarif"
     output_file = f"{dir_path}/merged_report.json"

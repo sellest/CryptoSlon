@@ -284,7 +284,7 @@ def run_sast_triage(**kwargs) -> Dict[str, Any]:
     # Extract parameters with defaults
     input_file = kwargs['input_file']
     output_file = kwargs.get('output_file')
-    model = kwargs.get('model', 'gigachat-pro')
+    model = kwargs.get('model', 'gigachat-max')
     template = kwargs.get('template', 'sast_v4')
     show_summary = kwargs.get('show_summary', False)
 
@@ -405,14 +405,14 @@ def analyze_sast_report(
 def main():
     """Example usage of the agent-friendly helper function."""
     # Example usage of the helper function
-    dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/test_7"
+    dir_path = "/Users/izelikson/python/CryptoSlon/SAST/reports/"
     input_file = f"{dir_path}/aggregated_report.json"
     output_file = f"{dir_path}/triage_analysis.json"
     
     result = run_sast_triage(
         input_file=input_file,
         output_file=output_file,
-        model="gigachat-pro",
+        model="gigachat-max",
         template="sast_v4",
         show_summary=False,
         log_level="INFO"

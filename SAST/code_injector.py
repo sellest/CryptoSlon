@@ -154,6 +154,21 @@ class CodeInjector:
         
         return start_line, end_line
     
+    def _get_fix_start_line(self, fix: Dict[str, Any]) -> int:
+        """
+        Extract start line number from a fix for sorting purposes.
+        
+        Args:
+            fix: Fix object from vulnerability_fixes.json
+            
+        Returns:
+            Start line number (0 if parsing fails)
+        """
+        vulnerability_info = fix.get("vulnerability_info", {})
+        location = vulnerability_info.get("location", "")
+        start_line, _ = self._parse_location(location)
+        return start_line
+    
     def _clean_llm_response(self, llm_response: str) -> str:
         """
         Clean LLM response by removing line number artifacts only.
@@ -486,25 +501,49 @@ class CodeInjector:
         self.stats["total_fixes"] = len(self.fixes)
         skip_all_remaining = False
         
-        for i, fix in enumerate(self.fixes, 1):
+        # Group fixes by file to handle line number drift within each file
+        fixes_by_file = {}
+        for fix in self.fixes:
             vulnerability_info = fix.get("vulnerability_info", {})
-            logger.info(f"[{i}/{len(self.fixes)}] Processing: {vulnerability_info.get('type', 'Unknown')[:50]}...")
+            file_path = self._resolve_file_path(vulnerability_info.get("file", ""))
+            if file_path not in fixes_by_file:
+                fixes_by_file[file_path] = []
+            fixes_by_file[file_path].append(fix)
+        
+        # Sort fixes within each file by line number in REVERSE order (bottom to top)
+        # This prevents line number drift issues
+        for file_path in fixes_by_file:
+            fixes_by_file[file_path].sort(key=lambda f: self._get_fix_start_line(f), reverse=True)
+            logger.info(f"Sorted {len(fixes_by_file[file_path])} fixes for {file_path} in reverse line order")
+        
+        # Process fixes file by file
+        fix_counter = 0
+        for file_path, file_fixes in fixes_by_file.items():
+            logger.info(f"Processing {len(file_fixes)} fixes for file: {file_path}")
             
-            # Apply fix
-            result = self.apply_single_fix(fix, interactive, skip_all_remaining)
+            for fix in file_fixes:
+                fix_counter += 1
+                vulnerability_info = fix.get("vulnerability_info", {})
+                logger.info(f"[{fix_counter}/{len(self.fixes)}] Processing: {vulnerability_info.get('type', 'Unknown')[:50]}...")
+                
+                # Apply fix
+                result = self.apply_single_fix(fix, interactive, skip_all_remaining)
+                
+                # Update statistics
+                if result == 'applied':
+                    self.stats["applied"] += 1
+                elif result == 'skipped':
+                    self.stats["skipped"] += 1
+                elif result == 'failed':
+                    self.stats["failed"] += 1
+                elif result == 'skip_all':
+                    self.stats["skipped"] += 1
+                    skip_all_remaining = True
+                elif result == 'quit':
+                    logger.info(f"Stopped at user request")
+                    break
             
-            # Update statistics
-            if result == 'applied':
-                self.stats["applied"] += 1
-            elif result == 'skipped':
-                self.stats["skipped"] += 1
-            elif result == 'failed':
-                self.stats["failed"] += 1
-            elif result == 'skip_all':
-                self.stats["skipped"] += 1
-                skip_all_remaining = True
-            elif result == 'quit':
-                logger.info(f"Stopped at user request")
+            if skip_all_remaining or result == 'quit':
                 break
         
         # Generate summary

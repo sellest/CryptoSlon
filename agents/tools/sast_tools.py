@@ -324,7 +324,7 @@ class SASTFixGenerationTool(BaseTool):
             },
             "template": {
                 "type": "string", 
-                "description": "Fix generation template (default: vulnerability_fix)"
+                "description": "Fix generation template (default: vulnerability_fix_v7)"
             },
             "max_vulnerabilities": {
                 "type": "integer",
@@ -341,7 +341,7 @@ class SASTFixGenerationTool(BaseTool):
         }
 
     def execute(self, triage_analysis: str, code_base_path: str, output_dir: str = ".",
-                model: str = "gpt-4o-mini", template: str = "vulnerability_fix",
+                model: str = "gpt-4o-mini", template: str = "vulnerability_fix_v7",
                 max_vulnerabilities: int = None, context_lines: int = 10, log_level: str = "INFO") -> Dict[str, Any]:
         """Execute vulnerability fix generation pipeline"""
         logger = logging.getLogger(f"tool.{self.name}")
@@ -584,7 +584,7 @@ class SASTFullPipelineTool(BaseTool):
 
     def execute(self, code_base_path: str, reports_path: str = None,
                 semgrep_config: str = None, triage_model: str = "gigachat-max",
-                fix_model: str = "gpt-5", max_vulnerabilities: int = None,
+                fix_model: str = "gigachat-max", max_vulnerabilities: int = None,
                 context_lines: int = 5, skip_injection: bool = False,
                 interactive_injection: bool = False, log_level: str = "INFO") -> Dict[str, Any]:
         """Execute complete SAST pipeline"""

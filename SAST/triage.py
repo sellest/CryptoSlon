@@ -22,7 +22,7 @@ from prompts.PromptManager import PromptManager
 from progress_indicator import ProgressIndicator
 
 class SASTTriageAnalyzer:
-    def __init__(self, model: str = "gpt-4o-mini", template_name: str = "sast"):
+    def __init__(self, model: str = "gpt-4o-mini", template_name: str = "sast_v4"):
         """
         Initialize SAST Triage Analyzer
         
@@ -284,10 +284,10 @@ def run_sast_triage(**kwargs) -> Dict[str, Any]:
     # Extract parameters with defaults
     input_file = kwargs['input_file']
     output_file = kwargs.get('output_file')
-    model = kwargs.get('model', 'gpt-4o-mini')
-    template = kwargs.get('template', 'sast')
+    model = kwargs.get('model', 'gigachat-pro')
+    template = kwargs.get('template', 'sast_v4')
     show_summary = kwargs.get('show_summary', False)
-    
+
     try:
         # Initialize analyzer
         triage_analyzer = SASTTriageAnalyzer(model=model, template_name=template)

@@ -260,5 +260,5 @@ def interactive_launch():
 if __name__ == "__main__":
 
     # interactive_launch()
-    request = "прогони полный саст пайплайн для кода /Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_16"
-    automated_launch(command=request, llm_provider="gpt-5")
+    request = "прогони полный саст пайплайн для кода /Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_28"
+    automated_launch(command=request, llm_provider="gigachat-pro")

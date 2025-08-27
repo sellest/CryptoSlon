@@ -160,7 +160,7 @@ cython_debug/
 
 ## Project-specific files
 ## Vector database storage
-#chroma_db/
+chroma_db/
 #*.db
 #*.sqlite
 
@@ -197,6 +197,7 @@ Desktop.ini
 # IDE files
 .vscode/
 .idea/
+.claude/
 *.sublime-project
 *.sublime-workspace
 
@@ -217,6 +218,10 @@ models/
 # *.txt
 # *.pdf
 # *.docx
+
+# SAST test data and reports
+/SAST/code_for_sast/
+/SAST/reports/
 
 # Claude
 CLAUDE.md

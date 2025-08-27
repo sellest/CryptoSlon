@@ -57,7 +57,7 @@ python example_agent_usage.py
 ```
 
 ### 1. Работа с Агентами
-[Инструкция по запуску агентов](docs/AGENT_USAGE_GUIDE.md)
+[Инструкция по запуску агентов](AGENT_USAGE_GUIDE.md)
 
 ### 2. Работа с LLM
 
@@ -77,13 +77,13 @@ system_prompt = "Ты эксперт по кибербезопасности"
 response = llm.chat_one("Что такое SQL injection?", system_prompt)
 print(response)
 ```
-Пример: [Test LLM](tests/test_llm_connection.py)
+Пример: [Test LLM](../tests/test_llm_connection.py)
 
 
 ### 3. Создание векторной базы данных
 Векторная БД — это хранилище, которое сохраняет тексты, изображения или другие данные в виде числовых векторов (эмбеддингов).
 Эти векторы позволяют сравнивать смысловую близость объектов, а не только точное совпадение слов.
-Сохраняет данные на локальную машину. Экземпляр БД должен быть построен на основе класса [BaseChromaDB](VectorDB/base_chroma_db.py).
+Сохраняет данные на локальную машину. Экземпляр БД должен быть построен на основе класса [BaseChromaDB](../VectorDB/base_chroma_db.py).
 
 ```python
 from VectorDB.base_chroma_db import BaseChromaDB
@@ -94,7 +94,7 @@ vector_db = BaseChromaDB(
     model_name="intfloat/multilingual-e5-base"  # Поддерживает русский язык
 )
 ```
-Пример: [Test VectorDB](tests/test_vectordb.py)
+Пример: [Test VectorDB](../tests/test_vectordb.py)
 
 ### 4. Векторизация .txt файлов
 _Для запуска векторизации необходима существующая векторная БД_
@@ -131,7 +131,7 @@ vectorizer.print_report(metrics)
 ### 4. Использование RAG системы
 Подробнее смотри в гайд о RAG, который я добавлю в /docs когда-нибудь
 
-Пример: [Test RAG](tests/test_full_rag.py)
+Пример: [Test RAG](../tests/test_full_rag.py)
 
 ## Поддерживаемые модели
 Поддерживается любая модель, входящая в состав библиотеки [langchain](https://python.langchain.com/docs/integrations/chat/)

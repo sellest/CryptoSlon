@@ -220,19 +220,19 @@ class SnippetExtractor:
             else:
                 cwe = cwe_data
             
-            risk = vuln.get("Risk", "")
-            fix = vuln.get("Fix", "")
+            risk = vuln.get("Risk", "") or ""
+            fix = vuln.get("Fix", "") or ""
             
             # Extract severity from risk field or from Count
             severity = "UNKNOWN"
             count_data = vuln.get("Count", {})
             if count_data and "severity" in count_data:
                 severity = count_data["severity"]
-            elif risk.startswith("HIGH"):
+            elif risk and risk.startswith("HIGH"):
                 severity = "HIGH"
-            elif risk.startswith("MEDIUM"):
+            elif risk and risk.startswith("MEDIUM"):
                 severity = "MEDIUM"
-            elif risk.startswith("LOW"):
+            elif risk and risk.startswith("LOW"):
                 severity = "LOW"
             
             # Process each representative evidence location

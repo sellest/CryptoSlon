@@ -9,6 +9,11 @@ Install semgrep:
 pip install semgrep
 ```
 
+Install bandit:
+```bash
+pip install bandit
+```
+
 ## Usage
 
 Run analysis on a directory:

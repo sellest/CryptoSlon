@@ -80,10 +80,22 @@ class SASTAnalysisTool(BaseTool):
             }
         }
 
-    def execute(self, target_path: str, output_dir: str = ".", semgrep_config: str = "../SAST/rules/python-security.yml", log_level: str = "INFO") -> Dict[str, Any]:
+    def execute(self, target_path: str, output_dir: str = None, semgrep_config: str = "../SAST/rules/python-security.yml", log_level: str = "INFO") -> Dict[str, Any]:
         """Execute complete SAST analysis pipeline"""
         logger = logging.getLogger(f"tool.{self.name}")
         logger.info(f"Running SAST analysis on: {target_path}")
+        print("Активирован инструмент: sast_analysis")
+        
+        # Auto-create output directory if not specified
+        if output_dir is None:
+            from pathlib import Path
+            code_base = Path(target_path).resolve()
+            output_dir = str(code_base.parent / "reports" / f"sast_analysis_{code_base.name}")
+            logger.info(f"Auto-created output directory: {output_dir}")
+        
+        # Ensure output directory exists
+        os.makedirs(output_dir, exist_ok=True)
+        logger.info(f"Reports will be saved to: {output_dir}")
         
         try:
             results = {
@@ -231,6 +243,7 @@ class SASTTriageTool(BaseTool):
         """Execute SAST triage analysis"""
         logger = logging.getLogger(f"tool.{self.name}")
         logger.info(f"Running SAST triage analysis on: {aggregated_report}")
+        print("Активирован инструмент: triage_analysis")
         
         try:
             # Run triage analysis
@@ -333,6 +346,7 @@ class SASTFixGenerationTool(BaseTool):
         """Execute vulnerability fix generation pipeline"""
         logger = logging.getLogger(f"tool.{self.name}")
         logger.info(f"Generating fixes for triage analysis: {triage_analysis}")
+        print("Активирован инструмент: fix_generation")
         
         try:
             results = {
@@ -460,6 +474,7 @@ class SASTCodeInjectionTool(BaseTool):
         """Execute code injection pipeline"""
         logger = logging.getLogger(f"tool.{self.name}")
         logger.info(f"Injecting fixes from: {fixes_report}")
+        print("Активирован инструмент: code_injector")
         
         try:
             # Run code injection
@@ -520,7 +535,7 @@ class SASTFullPipelineTool(BaseTool):
 
     @property
     def description(self) -> str:
-        return "Run complete SAST pipeline: Semgrep + Bandit + Merge + Aggregate + Triage + Snippet + Fix + Inject. Full automated vulnerability discovery and remediation."
+        return "Execute complete SAST pipeline end-to-end: automated vulnerability discovery, triage, fix generation, and remediation in one command."
 
     @property
     def parameters(self) -> Dict[str, Any]:
@@ -567,14 +582,28 @@ class SASTFullPipelineTool(BaseTool):
             }
         }
 
-    def execute(self, code_base_path: str, reports_path: str = "./sast_reports",
-                semgrep_config: str = None, triage_model: str = "gpt-5-mini",
-                fix_model: str = "gpt-5-mini", max_vulnerabilities: int = None,
+    def execute(self, code_base_path: str, reports_path: str = None,
+                semgrep_config: str = None, triage_model: str = "gigachat-pro",
+                fix_model: str = "gigachat-max", max_vulnerabilities: int = None,
                 context_lines: int = 5, skip_injection: bool = False,
                 interactive_injection: bool = False, log_level: str = "INFO") -> Dict[str, Any]:
         """Execute complete SAST pipeline"""
         logger = logging.getLogger(f"tool.{self.name}")
         logger.info(f"Running full SAST pipeline on: {code_base_path}")
+        print("Активирован инструмент: full_pipeline")
+        
+        # Auto-create reports directory if not specified
+        if reports_path is None:
+            from pathlib import Path
+            
+            # Create reports directory relative to code base
+            code_base = Path(code_base_path).resolve()
+            reports_path = str(code_base.parent / "reports" / f"sast_analysis_{code_base.name}")
+            logger.info(f"Auto-created reports directory: {reports_path}")
+        
+        # Ensure reports directory exists
+        os.makedirs(reports_path, exist_ok=True)
+        logger.info(f"Reports will be saved to: {reports_path}")
         
         try:
             # Import pipeline_run from full_sast_pipeline
@@ -604,27 +633,30 @@ class SASTFullPipelineTool(BaseTool):
                 interactive_injection=interactive_injection,
                 log_level=log_level
             )
-            
+            print("Пайплайн завершен")
             if result["success"]:
                 summary = result["data"]["summary"]
-                logger.info(f"Pipeline completed: {summary['successful_stages']}/{summary['total_stages']} stages successful")
+                logger.info(f"Pipeline completed: {summary.get('successful_stages', 'unknown')}/{summary.get('total_stages', 'unknown')} stages successful")
+                
+                # Debug: log the actual summary structure
+                logger.debug(f"Full pipeline summary keys: {list(summary.keys())}")
                 
                 return {
                     "success": True,
                     "pipeline_step": "full_pipeline",
                     "data": {
-                        "overall_success": summary["overall_success"],
-                        "successful_stages": summary["successful_stages"],
-                        "total_stages": summary["total_stages"],
-                        "duration_seconds": summary["duration_seconds"],
-                        "reports_directory": summary["reports_directory"],
-                        "stage_summary": summary["stage_summary"]
+                        "overall_success": summary.get("overall_success", True),
+                        "successful_stages": summary.get("successful_stages", 0),
+                        "total_stages": summary.get("total_stages", 0),
+                        "duration_seconds": summary.get("duration_seconds", 0),
+                        "reports_directory": summary.get("reports_directory") or summary.get("sast_reports") or reports_path,
+                        "stage_summary": summary.get("stage_summary", {})
                     },
                     "summary": {
-                        "reports_directory": summary["reports_directory"],
-                        "pipeline_status": f"{summary['successful_stages']}/{summary['total_stages']} stages completed",
-                        "overall_success": summary["overall_success"],
-                        "duration": f"{summary['duration_seconds']:.1f}s"
+                        "reports_directory": summary.get("reports_directory") or summary.get("sast_reports") or reports_path,
+                        "pipeline_status": f"{summary.get('successful_stages', 0)}/{summary.get('total_stages', 0)} stages completed",
+                        "overall_success": summary.get("overall_success", True),
+                        "duration": f"{summary.get('duration_seconds', 0):.1f}s"
                     }
                 }
             else:

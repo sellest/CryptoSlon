@@ -139,8 +139,19 @@ class FullSASTPipeline:
             self.logger.error(f"Pipeline execution failed: {e}")
             self.pipeline_results["overall_success"] = False
             self.pipeline_results["fatal_error"] = str(e)
-            self.pipeline_results["end_time"] = datetime.now()
-            
+        
+        # Always set end_time and calculate duration
+        self.pipeline_results["end_time"] = datetime.now()
+        duration = self.pipeline_results["end_time"] - self.pipeline_results["start_time"]
+        self.pipeline_results["total_duration"] = duration.total_seconds()
+        
+        # Determine overall success based on completed stages
+        successful_stages = sum(1 for stage in self.pipeline_results["stages"].values() if stage.get("success", False))
+        total_stages = len(self.pipeline_results["stages"])
+        self.pipeline_results["successful_stages"] = successful_stages
+        self.pipeline_results["total_stages"] = total_stages
+        self.pipeline_results["overall_success"] = successful_stages >= total_stages - 1  # Allow 1 stage to fail
+        
         return self.pipeline_results
     
     def _run_semgrep_stage(self, config: str = None):
@@ -503,7 +514,7 @@ def pipeline_run(**kwargs) -> Dict[str, Any]:
         triage_template (str, optional): Prompt template for triage (default: "sast_v4")
         fix_model (str, optional): LLM model for fix generation (default: "gigachat-pro")
         fix_template (str, optional): Prompt template for fixes (default: "vulnerability_fix_v6")
-        max_vulnerabilities (int, optional): Limit fixes for testing (default: None)
+        max_vulnerabilities (int, optional): Limit fixes for testing (default: 20)
         context_lines (int, optional): Context lines around vulnerable code (default: 5)
         interactive_injection (bool, optional): Interactive code injection (default: False)
         skip_injection (bool, optional): Skip code injection stage (default: False)
@@ -542,7 +553,7 @@ def pipeline_run(**kwargs) -> Dict[str, Any]:
     triage_template = kwargs.get("triage_template", "sast_v4")
     fix_model = kwargs.get("fix_model", "gigachat-pro")
     fix_template = kwargs.get("fix_template", "vulnerability_fix_v6")
-    max_vulnerabilities = kwargs.get("max_vulnerabilities", None)
+    max_vulnerabilities = kwargs.get("max_vulnerabilities", 20)
     context_lines = kwargs.get("context_lines", 5)
     interactive_injection = kwargs.get("interactive_injection", False)
     skip_injection = kwargs.get("skip_injection", False)

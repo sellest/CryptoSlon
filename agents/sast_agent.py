@@ -218,15 +218,41 @@ def interactive_launch():
     
     try:
         # Create SAST agent
-        agent = create_sast_agent(llm_provider="gigachat-max")
+        agent = create_sast_agent(llm_provider="gigachat-pro")
         
         # Example 1: Interactive agent usage
-        print("🤖 SAST Security Agent ready!")
-        print("Use english, it works better.")
-        print("Available commands:")
-        print("- 'status' - Get pipeline status")
-        print("- 'reset' - Reset pipeline state")
-        print("- 'quit' - Exit")
+        print("\n" + "=" * 70)
+        print(" SAST Security Agent - Interactive Mode")
+        print("=" * 70)
+        print("\n HOW TO USE:")
+        print(" -----------")
+        print(" The agent understands natural language commands in English.")
+        print(" Simply describe what you want to analyze or do.\n")
+        
+        print(" EXAMPLE COMMANDS:")
+        print(" -----------------")
+        print(" • Analyze /path/to/code for security vulnerabilities")
+        print(" • Run full SAST pipeline on /path/to/project")
+        print(" • Scan /path/to/file.py with Semgrep and Bandit")
+        print(" • Generate fixes for vulnerabilities in /path/to/code")
+        print(" • Apply security fixes to /path/to/code\n")
+        
+        print(" PIPELINE STAGES:")
+        print(" ----------------")
+        print(" 1. ANALYSIS    - Runs Semgrep + Bandit security scanners")
+        print(" 2. TRIAGE      - AI prioritizes vulnerabilities by severity")
+        print(" 3. FIX GEN     - AI generates secure code fixes")
+        print(" 4. INJECTION   - Applies fixes to source code (with backup)\n")
+
+        print(" TIPS:")
+        print(" -----")
+        print(" • Use absolute paths for directories and files")
+        print(" • Agent remembers context from previous commands")
+        print(" • You can run individual stages or the full pipeline")
+        print(" • All changes are backed up before applying fixes")
+        print("\n" + "=" * 70)
+        print(" Agent ready! Type your command or 'quit' to exit.")
+        print("=" * 70)
         
         # Interactive mode
         while True:

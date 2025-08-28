@@ -49,3 +49,5 @@ legacy/
 
 # Claude
 CLAUDE.md
+/SAST/code_for_sast/
+/SAST/code_for_sast/taskstate/

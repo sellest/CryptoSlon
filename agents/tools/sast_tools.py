@@ -554,11 +554,11 @@ class SASTFullPipelineTool(BaseTool):
             },
             "triage_model": {
                 "type": "string",
-                "description": "LLM model for triage (default: gigachat-pro)"
+                "description": "LLM model for triage (default: gigachat-max)"
             },
             "fix_model": {
                 "type": "string",
-                "description": "LLM model for fix generation (default: gigachat-pro)"
+                "description": "LLM model for fix generation (default: gigachat-max)"
             },
             "max_vulnerabilities": {
                 "type": "integer",

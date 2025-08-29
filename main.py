@@ -90,17 +90,30 @@ def display_menu():
     print()
 
 
-def main():
-    """Main entry point with menu-driven interface"""
+def main(log_level="INFO"):
+    """Main entry point with menu-driven interface
+    
+    Args:
+        log_level: Logging level as string. Options: "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+                  Can also accept lowercase versions like "info", "warning", etc.
+    """
+    
+    # Convert log_level string to logging constant
+    log_level = log_level.upper()
+    valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    if log_level not in valid_levels:
+        print(f"Invalid log level: {log_level}. Using INFO instead.")
+        log_level = "INFO"
     
     # Configure logging
     logging.basicConfig(
-        level=logging.INFO,
+        level=getattr(logging, log_level),
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
-    # Suppress noisy httpx logs
-    logging.getLogger("httpx").setLevel(logging.WARNING)
+    # Suppress noisy httpx logs (keep them at WARNING minimum)
+    httpx_level = max(logging.WARNING, getattr(logging, log_level))
+    logging.getLogger("httpx").setLevel(httpx_level)
     
     print("\nWelcome to CryptoSlon Security Platform!")
     
@@ -115,7 +128,7 @@ def main():
                 print("\nOption 1: Analyze code for vulnerabilities")
                 print("-" * 40)
                 directory = get_valid_directory()
-                command = f"analyze code for vulnerabilities in {directory}"
+                command = f"perform semgrep analysis in {directory}"
                 run_automated_mode(command, "gigachat-pro")
                 
             elif choice == "2":
@@ -152,8 +165,22 @@ def main():
 
 
 if __name__ == "__main__":
+    import argparse
+    
+    # Parse command line arguments for log level
+    parser = argparse.ArgumentParser(description='CryptoSlon SAST Security Agent')
+    parser.add_argument(
+        '--log-level', '-l',
+        type=str,
+        default='WARNING',
+        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+        help='Set the logging level (default: INFO)'
+    )
+    
+    args = parser.parse_args()
+    
     try:
-        main()
+        main(log_level=args.log_level)
     except KeyboardInterrupt:
         print("\n\nOperation cancelled by user")
         sys.exit(0)

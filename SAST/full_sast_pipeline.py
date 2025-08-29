@@ -82,7 +82,7 @@ class FullSASTPipeline:
         context_lines: int = 5,
         interactive_injection: bool = False,
         skip_injection: bool = False,
-        use_bandit: bool = False
+        use_bandit: bool = True
     ) -> Dict[str, Any]:
         """
         Run the complete 8-stage SAST pipeline
@@ -516,12 +516,12 @@ def pipeline_run(**kwargs) -> Dict[str, Any]:
         triage_model (str, optional): LLM model for triage (default: "gigachat-pro")
         triage_template (str, optional): Prompt template for triage (default: "sast_v4")
         fix_model (str, optional): LLM model for fix generation (default: "gigachat-pro")
-        fix_template (str, optional): Prompt template for fixes (default: "vulnerability_fix_v6")
+        fix_template (str, optional): Prompt template for fixes (default: "vulnerability_fix_v7")
         max_vulnerabilities (int, optional): Limit fixes for testing (default: 20)
         context_lines (int, optional): Context lines around vulnerable code (default: 5)
         interactive_injection (bool, optional): Interactive code injection (default: False)
         skip_injection (bool, optional): Skip code injection stage (default: False)
-        use_bandit (bool, optional): Use additional vulnerability scan (default: False)
+        use_bandit (bool, optional): Use additional vulnerability scan (default: True)
         
     Returns:
         Dict with standardized format:
@@ -556,11 +556,12 @@ def pipeline_run(**kwargs) -> Dict[str, Any]:
     triage_model = kwargs.get("triage_model", "gigachat-max")
     triage_template = kwargs.get("triage_template", "sast_v4")
     fix_model = kwargs.get("fix_model", "gigachat-max")
-    fix_template = kwargs.get("fix_template", "vulnerability_fix_v6")
+    fix_template = kwargs.get("fix_template", "vulnerability_fix_v7")
     max_vulnerabilities = kwargs.get("max_vulnerabilities", 20)
     context_lines = kwargs.get("context_lines", 5)
     interactive_injection = kwargs.get("interactive_injection", False)
     skip_injection = kwargs.get("skip_injection", False)
+    use_bandit = kwargs.get("use_bandit", True)
     
     try:
         # Initialize pipeline
@@ -609,9 +610,9 @@ def pipeline_run(**kwargs) -> Dict[str, Any]:
 
 def usage_example():
     result = pipeline_run(
-        code_base_path="/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_30",
+        code_base_path="/Users/izelikson/python/CryptoSlon/SAST/code_for_sast/taskstate_control_3",
         reports_path="/Users/izelikson/python/CryptoSlon/SAST/reports",
-        triage_model="gigachat-max",
+        triage_model="gpt-5",
         fix_model="gigachat-max",
         context_lines=5,
         max_vulnerabilities=10,
